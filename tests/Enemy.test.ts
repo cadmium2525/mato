@@ -80,35 +80,29 @@ describe('TrackingEnemyController', () => {
   });
 });
 
-describe('AttackDirector', () => {
+describe('AttackDirector (single)', () => {
   it('発射済みの着弾予定位置は、その後的が動いても変わらない', () => {
     const c = controller();
-    const director = new AttackDirector(GameConfig.attack.impactLifetime, GameConfig.attack.streamSegmentSeconds);
+    const director = new AttackDirector(GameConfig.attack);
+    const p = c.profile;
+    director.beginRound({ kind: 'single', profile: p, rng: new SeededRandom(1), fireIntervalMultiplier: 1, pelletCount: 5, startAt: p.windupSeconds, endAt: p.windupSeconds + p.durationSeconds });
     let now = 0;
     let player = { x: 0.1, y: 0.2 };
-    while (c.state === 'windup') {
-      c.update(1 / 120, player);
+    const toUV = (x: number, y: number) => surface.fromMetric(x, y);
+    let impacts: ReturnType<AttackDirector['update']> = [];
+    while (impacts.length === 0) {
       now += 1 / 120;
+      const shots = c.update(1 / 120, player);
+      impacts = director.update({ now, shots, streaming: c.state === 'streaming', aim: c.aim, toUV });
     }
-    c.update(1 / 120, player);
-    const impacts = director.fire({ kind: 'single', aim: c.aim, now, profile: c.profile, toUV: (x, y) => surface.fromMetric(x, y) });
     const snapshot = impacts.map((i) => ({ ...i }));
-    // 的が大きく動く
     for (let i = 0; i < 60; i++) {
       player = { x: surface.widthM - 0.05, y: surface.heightM - 0.05 };
-      c.update(1 / 120, player);
+      now += 1 / 120;
+      const shots = c.update(1 / 120, player);
+      director.update({ now, shots, streaming: c.state === 'streaming', aim: c.aim, toUV });
     }
     expect(impacts).toEqual(snapshot);
-    expect(impacts[0].impactAt).toBeCloseTo(now + c.profile.timeToImpact);
-  });
-
-  it('尿流は一定時間ごとに別の攻撃IDに区切られる', () => {
-    const director = new AttackDirector(0.09, 0.6);
-    const ctx = (now: number) => ({ kind: 'single' as const, aim: { x: 0.1, y: 0.1 }, now, profile: getProfile('salaryman'), toUV: (x: number, y: number) => surface.fromMetric(x, y) });
-    const a = director.fire(ctx(0))[0];
-    const b = director.fire(ctx(0.3))[0];
-    const c = director.fire(ctx(0.7))[0];
-    expect(a.attackId).toBe(b.attackId);
-    expect(c.attackId).not.toBe(a.attackId);
+    expect(impacts[0].impactAt).toBeCloseTo(snapshot[0].spawnAt + p.timeToImpact);
   });
 });

@@ -24,6 +24,11 @@ export interface EnemyProfile {
   sway: { amplitude: number; frequency: number };
   /** 断続発射（おじいちゃん）。onSeconds=0 なら連続発射 */
   pulse: { onSeconds: number; offSeconds: number; warningSeconds: number };
+  /**
+   * 跳ね返り（マッチョ）。every 個の着弾ごとに1つ、着弾点から跳ねた二次着弾を作る。
+   * 一次着弾の瞬間に二次着弾の予定地点へ予兆マーカーを出し、delay 秒後に着弾する。every=0 で無効
+   */
+  bounce: { every: number; delay: number; radiusScale: number; drop: number; jitter: number };
   /** 外見 */
   look: {
     height: number;
@@ -39,11 +44,11 @@ export interface EnemyProfile {
 }
 
 /**
- * 4人の敵の設定。
- * Phase 1 ではサラリーマンが完成形。他3人は数値（時間・追尾・揺れ・断続・着弾半径）を
- * 共通コントローラで反映済みだが、以下は Phase 2 の TODO:
- * - TODO(phase2): muscle の跳ね返り二次Impactと発動予兆
- * - TODO(phase2): drunk / elderly の予兆演出の調整と攻撃パターンとの組み合わせ調整
+ * 4人の敵の設定。共通の追尾コントローラ＋攻撃ディレクターに、以下の癖をデータで与える。
+ * - salaryman: 高精度で安定した追尾
+ * - drunk: 時間連続の左右揺れと大きな反応遅れ
+ * - elderly: 断続発射。再開前に照準リングが点滅（warning）
+ * - muscle: 大きな着弾と、予兆マーカー付きの跳ね返り二次着弾
  */
 export const ENEMY_PROFILES: Record<EnemyKind, EnemyProfile> = {
   salaryman: {
@@ -58,6 +63,7 @@ export const ENEMY_PROFILES: Record<EnemyKind, EnemyProfile> = {
     windupSeconds: 0.9,
     sway: { amplitude: 0, frequency: 0 },
     pulse: { onSeconds: 0, offSeconds: 0, warningSeconds: 0 },
+    bounce: { every: 0, delay: 0, radiusScale: 0, drop: 0, jitter: 0 },
     look: {
       height: 1.72, build: 1, shirt: 0xf2f2ee, jacket: 0x222a3a, pants: 0x222a3a,
       skin: 0xe0b394, hair: 0x1a1a1a, accent: 0xa3202a, stoop: 0,
@@ -75,6 +81,7 @@ export const ENEMY_PROFILES: Record<EnemyKind, EnemyProfile> = {
     windupSeconds: 1.0,
     sway: { amplitude: 0.07, frequency: 0.45 },
     pulse: { onSeconds: 0, offSeconds: 0, warningSeconds: 0 },
+    bounce: { every: 0, delay: 0, radiusScale: 0, drop: 0, jitter: 0 },
     look: {
       height: 1.7, build: 1.05, shirt: 0xe8e2d0, jacket: 0x5a4632, pants: 0x3b3b40,
       skin: 0xe89a86, hair: 0x2b2018, accent: 0x2a5aa0, stoop: 0.08,
@@ -92,6 +99,7 @@ export const ENEMY_PROFILES: Record<EnemyKind, EnemyProfile> = {
     windupSeconds: 1.1,
     sway: { amplitude: 0, frequency: 0 },
     pulse: { onSeconds: 1.4, offSeconds: 1.1, warningSeconds: 0.45 },
+    bounce: { every: 0, delay: 0, radiusScale: 0, drop: 0, jitter: 0 },
     look: {
       height: 1.6, build: 0.92, shirt: 0xd9d3c0, jacket: 0x9c8a6a, pants: 0x5b5548,
       skin: 0xd9ab8c, hair: 0xc8c8c8, accent: 0x6b4a2a, stoop: 0.22,
@@ -109,6 +117,7 @@ export const ENEMY_PROFILES: Record<EnemyKind, EnemyProfile> = {
     windupSeconds: 0.9,
     sway: { amplitude: 0, frequency: 0 },
     pulse: { onSeconds: 0, offSeconds: 0, warningSeconds: 0 },
+    bounce: { every: 20, delay: 0.38, radiusScale: 0.7, drop: 0.08, jitter: 0.05 },
     look: {
       height: 1.82, build: 1.15, shirt: 0x1c1c1c, jacket: 0x1c1c1c, pants: 0x34404e,
       skin: 0xc98f6c, hair: 0x111111, accent: 0xe8e8e8, stoop: 0,
@@ -139,6 +148,9 @@ export function validateProfile(p: EnemyProfile, playerSpeed: number): string[] 
   if (p.sway.amplitude < 0 || p.sway.frequency < 0) errors.push(`${p.kind}.sway must be >= 0`);
   if (p.pulse.onSeconds > 0 && !(p.pulse.offSeconds > p.pulse.warningSeconds && p.pulse.warningSeconds > 0)) {
     errors.push(`${p.kind}.pulse needs offSeconds > warningSeconds > 0`);
+  }
+  if (p.bounce.every > 0 && !(p.bounce.delay >= 0.25 && p.bounce.radiusScale > 0 && p.bounce.every >= 3)) {
+    errors.push(`${p.kind}.bounce needs delay >= 0.25 (予兆の時間), radiusScale > 0, every >= 3`);
   }
   if (!p.name) errors.push(`${p.kind}.name is empty`);
   return errors;

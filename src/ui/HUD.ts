@@ -4,6 +4,7 @@ export interface HudState {
   cleared: number;
   enemyNumber: number;
   enemyName: string;
+  attackName: string;
   remaining: number;
   total: number;
   score: number;
@@ -76,7 +77,7 @@ export class HUD {
 
   update(s: HudState, dt: number): void {
     this.setText(this.cleared, `${s.cleared}人抜き`);
-    this.setText(this.enemy, s.enemyNumber > 0 ? `${s.enemyNumber}人目：${s.enemyName}` : '');
+    this.setText(this.enemy, s.enemyNumber > 0 ? `${s.enemyNumber}人目：${s.enemyName}${s.attackName ? `［${s.attackName}］` : ''}` : '');
     const ratio = s.total > 0 ? Math.max(0, Math.min(1, s.remaining / s.total)) : 0;
     this.bar.style.transform = `scaleX(${ratio.toFixed(3)})`;
     this.setText(this.remaining, s.total > 0 ? `残り ${Math.max(0, s.remaining).toFixed(1)} 秒` : '');

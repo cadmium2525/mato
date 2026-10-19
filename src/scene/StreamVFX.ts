@@ -3,9 +3,11 @@ import {
   Color,
   DynamicDrawUsage,
   InstancedMesh,
+  MeshBasicMaterial,
   Matrix4,
   MeshStandardMaterial,
   Quaternion,
+  RingGeometry,
   SphereGeometry,
   Vector3,
 } from 'three';
@@ -14,6 +16,7 @@ import type { UrinalSurface } from './UrinalSurface';
 
 const MAX_DROPS = 600;
 const MAX_SPLASH = 300;
+const MAX_WARN = 64;
 const SPLASH_LIFE = 0.45;
 const Z_AXIS = new Vector3(0, 0, 1);
 
@@ -32,6 +35,8 @@ interface Splash {
 export class StreamVFX {
   readonly drops: InstancedMesh;
   readonly splashes: InstancedMesh;
+  /** ショットガン・跳ね返りの着弾予告マーカー。着弾が近づくほど判定半径へ収束する */
+  readonly warnings: InstancedMesh;
   private readonly splashPool: Splash[] = [];
   private splashCursor = 0;
   private readonly landed = new Set<number>();
@@ -42,6 +47,9 @@ export class StreamVFX {
   private readonly n = new Vector3();
   private readonly s = new Vector3();
   private readonly q = new Quaternion();
+  private readonly from = new Vector3();
+  private readonly fromN = new Vector3();
+  private time = 0;
 
   constructor(
     private readonly surface: UrinalSurface,
@@ -76,6 +84,13 @@ export class StreamVFX {
     this.splashes.count = 0;
     this.splashes.frustumCulled = false;
     this.splashes.renderOrder = 4;
+
+    const warnMat = new MeshBasicMaterial({ color: new Color(0xff5a1f), transparent: true, opacity: 0.9, depthWrite: false });
+    this.warnings = new InstancedMesh(new RingGeometry(0.78, 1, 32), warnMat, MAX_WARN);
+    this.warnings.instanceMatrix.setUsage(DynamicDrawUsage);
+    this.warnings.count = 0;
+    this.warnings.frustumCulled = false;
+    this.warnings.renderOrder = 5;
   }
 
   clear(): void {
@@ -84,6 +99,7 @@ export class StreamVFX {
     this.landed.clear();
     this.drops.count = 0;
     this.splashes.count = 0;
+    this.warnings.count = 0;
   }
 
   /** 的への命中位置に大きめの飛沫を出す */
@@ -91,7 +107,8 @@ export class StreamVFX {
     this.addSplash(u, v, radius * 2.2, now);
   }
 
-  update(impacts: readonly Impact[], now: number): void {
+  update(impacts: readonly Impact[], now: number, dt = 0): void {
+    this.time += dt;
     // 尿粒
     let di = 0;
     for (const impact of impacts) {
@@ -100,11 +117,21 @@ export class StreamVFX {
         if (di >= MAX_DROPS) continue;
         const t = (now - impact.spawnAt) / (impact.impactAt - impact.spawnAt);
         this.surface.surfacePoint(impact.u, impact.v, this.target);
-        this.p.lerpVectors(this.origin, this.target, t);
-        this.p.y += this.arcHeight * 4 * t * (1 - t);
+        let arc = this.arcHeight;
+        let origin = this.origin;
+        if (impact.fromU !== undefined && impact.fromV !== undefined) {
+          // 跳ね返り: 一次着弾点から壁の手前を小さく跳ねる
+          this.surface.surfacePoint(impact.fromU, impact.fromV, this.from);
+          this.surface.surfaceNormal(impact.fromU, impact.fromV, this.fromN);
+          this.from.addScaledVector(this.fromN, 0.01);
+          origin = this.from;
+          arc = 0.03;
+        }
+        this.p.lerpVectors(origin, this.target, t);
+        this.p.y += arc * 4 * t * (1 - t);
         const r = 0.0025 + impact.radius * 0.08;
         this.s.set(r, r, r * 3);
-        this.q.setFromUnitVectors(Z_AXIS, this.n.subVectors(this.target, this.origin).normalize());
+        this.q.setFromUnitVectors(Z_AXIS, this.n.subVectors(this.target, origin).normalize());
         this.m.compose(this.p, this.q, this.s);
         this.drops.setMatrixAt(di++, this.m);
       } else if (!this.landed.has(impact.id) && this.lastNow <= impact.endAt) {
@@ -114,6 +141,24 @@ export class StreamVFX {
     }
     this.drops.count = di;
     this.drops.instanceMatrix.needsUpdate = true;
+
+    // 着弾予告マーカー
+    let wi = 0;
+    for (const impact of impacts) {
+      if (impact.warnAt === undefined || now < impact.warnAt || now >= impact.impactAt || wi >= MAX_WARN) continue;
+      const k = (now - impact.warnAt) / (impact.impactAt - impact.warnAt);
+      const pulse = 1 + 0.06 * Math.sin(this.time * 30);
+      const scale = impact.radius * (1.9 - 0.9 * k) * pulse;
+      this.surface.surfacePoint(impact.u, impact.v, this.p);
+      this.surface.surfaceNormal(impact.u, impact.v, this.n);
+      this.p.addScaledVector(this.n, 0.005);
+      this.q.setFromUnitVectors(Z_AXIS, this.n);
+      this.s.set(scale, scale, 1);
+      this.m.compose(this.p, this.q, this.s);
+      this.warnings.setMatrixAt(wi++, this.m);
+    }
+    this.warnings.count = wi;
+    this.warnings.instanceMatrix.needsUpdate = true;
 
     // 着弾飛沫（判定中は判定半径そのまま、その後は広がって消える）
     let si = 0;

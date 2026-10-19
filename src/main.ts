@@ -1,4 +1,6 @@
 import './styles.css';
+import type { AttackKind } from './attacks/AttackTypes';
+import { AttackDirector } from './attacks/AttackDirector';
 import { Game } from './game/Game';
 
 function webglAvailable(): boolean {
@@ -32,7 +34,10 @@ if (root) {
   } else {
     try {
       const touch = params.has('touch') || window.matchMedia?.('(pointer: coarse)').matches === true;
-      const game = new Game(root, { seed, lowQuality: params.has('low'), touch, debug: params.has('debug'), god: params.has('debug') && params.has('god') });
+      const debug = params.has('debug');
+      const attackParam = params.get('attack') as AttackKind | null;
+      const forceAttack = debug && attackParam && AttackDirector.supportedKinds.includes(attackParam) ? attackParam : null;
+      const game = new Game(root, { seed, lowQuality: params.has('low'), touch, debug, god: debug && params.has('god'), forceAttack });
       game.start();
     } catch (err) {
       console.error(err);

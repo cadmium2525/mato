@@ -46,30 +46,40 @@ export class TargetMarker {
   }
 }
 
-/** 照準の予告リング。発射前の予備動作・再開予兆では点滅する */
+/** 照準の予告リング（2WAY/3WAY では尿流の本数ぶん出す）。予備動作・再開予兆・区間の切り替えでは点滅する */
 export class AimRing {
-  readonly mesh: Mesh;
+  readonly group = new Group();
   private readonly material: MeshBasicMaterial;
+  private geometry: RingGeometry;
+  private readonly meshes: Mesh[] = [];
   private time = 0;
 
-  constructor(private readonly surface: UrinalSurface, radius: number) {
+  constructor(private readonly surface: UrinalSurface, radius: number, maxRings = 3) {
     this.material = new MeshBasicMaterial({ color: 0xffc81e, transparent: true, opacity: 0.8, depthWrite: false });
-    this.mesh = new Mesh(new RingGeometry(radius * 0.72, radius, 40), this.material);
-    this.mesh.renderOrder = 3;
-    this.mesh.visible = false;
+    this.geometry = new RingGeometry(radius * 0.72, radius, 40);
+    for (let i = 0; i < maxRings; i++) {
+      const m = new Mesh(this.geometry, this.material);
+      m.renderOrder = 3;
+      m.visible = false;
+      this.meshes.push(m);
+      this.group.add(m);
+    }
   }
 
   setRadius(radius: number): void {
-    this.mesh.geometry.dispose();
-    this.mesh.geometry = new RingGeometry(radius * 0.72, radius, 40);
+    this.geometry.dispose();
+    this.geometry = new RingGeometry(radius * 0.72, radius, 40);
+    for (const m of this.meshes) m.geometry = this.geometry;
   }
 
   /** mode: 'warn' 点滅 / 'live' 常時表示 / 'off' 非表示 */
-  update(dt: number, u: number, v: number, mode: 'warn' | 'live' | 'off'): void {
+  update(dt: number, points: ReadonlyArray<{ u: number; v: number }>, mode: 'warn' | 'live' | 'off'): void {
     this.time += dt;
-    this.mesh.visible = mode !== 'off';
-    if (mode === 'off') return;
-    placeOnSurface(this.mesh, this.surface, u, v, 0.004);
     this.material.opacity = mode === 'warn' ? (Math.sin(this.time * 22) > 0 ? 0.95 : 0.25) : 0.55;
+    this.meshes.forEach((m, i) => {
+      const p = points[i];
+      m.visible = mode !== 'off' && p !== undefined;
+      if (m.visible) placeOnSurface(m, this.surface, p.u, p.v, 0.004);
+    });
   }
 }

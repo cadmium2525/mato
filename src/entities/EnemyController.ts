@@ -14,6 +14,8 @@ export interface EnemyController {
   readonly totalSeconds: number;
   /** 1ステップ進め、このステップで発射すべき回数を返す */
   update(dt: number, player: Vec2): number;
+  /** 攻撃パターンに応じた追尾速度の一時的な倍率 */
+  setTrackingScale(scale: number): void;
 }
 
 export interface ControllerOptions {
@@ -47,6 +49,7 @@ export class TrackingEnemyController implements EnemyController {
   private emitAccumulator = 0;
   private readonly phases: number[];
   private readonly trackingSpeed: number;
+  private trackingScale = 1;
 
   constructor(
     readonly profile: EnemyProfile,
@@ -58,6 +61,10 @@ export class TrackingEnemyController implements EnemyController {
     this.trackingSpeed = profile.trackingSpeed * options.trackingMultiplier;
     // 揺れの位相はシード付き乱数で決める（再現可能）
     this.phases = Array.from({ length: 5 }, () => options.rng.range(0, Math.PI * 2));
+  }
+
+  setTrackingScale(scale: number): void {
+    this.trackingScale = scale;
   }
 
   get aim(): Vec2 {
@@ -102,7 +109,7 @@ export class TrackingEnemyController implements EnemyController {
     const dx = target.x - this.baseAim.x;
     const dy = target.y - this.baseAim.y;
     const d = Math.hypot(dx, dy);
-    const step = this.trackingSpeed * dt;
+    const step = this.trackingSpeed * this.trackingScale * dt;
     if (d <= step) {
       this.baseAim = target;
     } else {

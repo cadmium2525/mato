@@ -46,6 +46,42 @@ export const GameConfig = {
     arcHeight: 0.05,
     /** 尿の発射口（プレイ中カメラの画面外下方） */
     origin: { x: 0, y: 0.64, z: 0.86 },
+
+    /**
+     * 2WAY: 左右2本の内側の空き（着弾の縁から縁まで）。キャラの着弾半径に関係なく一定にし、
+     * 的の判定直径（約5.4cm）の2倍程度を確保する
+     */
+    twoWayClear: 0.11,
+    /**
+     * 3WAY: 中央＋左右下の「Λ」字。左右は drop だけ下にずらすので、
+     * 照準と同じ高さを横へ逃げる道は常に空いている（drop > 着弾半径 + 的の判定半径）。
+     * 値は着弾半径 baseRadius のキャラ用で、着弾が大きいキャラはその差だけ間隔を広げる
+     */
+    threeWay: { side: 0.11, drop: 0.1, baseRadius: 0.026 },
+    /** 尿流が分かれている間は照準が鈍る（追尾速度に掛ける）。広い攻撃ほど追尾は遅い */
+    trackingScale: { single: 1, twoWay: 0.85, threeWay: 0.7, shotgun: 1, gap: 1 },
+    shotgun: {
+      /** 一斉射撃の間隔（難易度の fireIntervalMultiplier を掛ける） */
+      interval: 1.05,
+      /** 着弾予定地点を予告してから発射するまで */
+      telegraph: 0.45,
+      /** 粒の判定時間 */
+      lifetime: 0.14,
+      /** 扇の開き（度） */
+      spreadDeg: 110,
+      /** 扇の要からの距離の範囲 */
+      minDist: 0.035,
+      maxDist: 0.13,
+      /** 粒の半径 = キャラの着弾半径 × この値 */
+      radiusScale: 0.85,
+    },
+    combo: {
+      /** 1区間の長さの範囲 */
+      segmentMin: 1.6,
+      segmentMax: 2.4,
+      /** 区間の切り替え時に必ず入る休止（照準リングが点滅して予告） */
+      gap: 0.55,
+    },
   },
 
   nearMiss: {

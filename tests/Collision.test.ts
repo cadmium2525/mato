@@ -5,7 +5,7 @@ import { NearMissTracker, circlesOverlap, findHit, segmentPointDistance } from '
 const identity = (u: number, v: number) => ({ x: u, y: v });
 
 function impact(partial: Partial<Impact> & { u: number; v: number }): Impact {
-  return { id: 1, attackId: 1, radius: 0.02, spawnAt: 0, impactAt: 0, endAt: 1, ...partial };
+  return { id: 1, attackId: 1, radius: 0.02, spawnAt: 0, impactAt: 0, endAt: 1, kind: 'stream', ...partial };
 }
 
 describe('circlesOverlap', () => {

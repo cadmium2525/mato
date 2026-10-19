@@ -1,5 +1,5 @@
 import { ACESFilmicToneMapping, PCFShadowMap, PerspectiveCamera, Vector3, WebGLRenderer } from 'three';
-import { AttackDirector } from '../attacks/AttackDirector';
+import { ATTACK_NAMES, type AttackKind } from '../attacks/AttackTypes';
 import { getProfile } from '../entities/EnemyProfiles';
 import { InputManager, type ActionName } from '../input/InputManager';
 import { TouchJoystick } from '../input/TouchJoystick';
@@ -27,6 +27,8 @@ export interface GameOptions {
   debug: boolean;
   /** デバッグ用（?debug&god）: 被弾を無視する。E2E確認用 */
   god: boolean;
+  /** デバッグ用（?debug&attack=shotgun）: 攻撃の種類を固定する */
+  forceAttack: AttackKind | null;
 }
 
 /** 描画・入力・ロジックを束ねるオーケストレーター */
@@ -54,6 +56,9 @@ export class Game {
   private lastFrame = -1;
   private closeupStarted = false;
   private rng = new SeededRandom(1);
+  /** このゲームで既に出た攻撃（解禁直後の攻撃を必ず1回体験させるため） */
+  private readonly usedAttacks = new Set<AttackKind>();
+  private attackKind: AttackKind = 'single';
   private readonly onResize = (): void => this.resize();
 
   constructor(private readonly container: HTMLElement, private readonly options: GameOptions) {
@@ -78,7 +83,7 @@ export class Game {
     const o = GameConfig.attack.origin;
     this.vfx = new StreamVFX(surface, new Vector3(o.x, o.y, o.z), GameConfig.attack.arcHeight);
     this.queueView = new QueueView(GameConfig.queue.visibleSlots);
-    this.world.scene.add(this.marker.mesh, this.aimRing.mesh, this.vfx.drops, this.vfx.splashes, this.queueView.group);
+    this.world.scene.add(this.marker.mesh, this.aimRing.group, this.vfx.drops, this.vfx.splashes, this.vfx.warnings, this.queueView.group);
 
     // キャンバスの上に仮想スティックの受付面、その上に HUD / 画面を重ねる
     this.joystick = new TouchJoystick(container, GameConfig.touch);
@@ -129,6 +134,8 @@ export class Game {
           player: { ...this.sim.player.position },
           aim: this.sim.enemy ? { ...this.sim.enemy.aim } : null,
           impacts: this.sim.impacts.length,
+          attack: this.attackKind,
+          pattern: this.sim.attacks.pattern,
           seed: this.director.seed,
         }),
       };
@@ -154,6 +161,7 @@ export class Game {
     const seed = this.options.seed ?? randomSeed();
     this.rng = new SeededRandom(seed);
     this.score.reset();
+    this.usedAttacks.clear();
     this.queueView.clear();
     this.director.startGame(seed);
   }
@@ -279,11 +287,14 @@ export class Game {
 
     const profile = getProfile(entry.kind);
     const diff = this.difficulty.forEnemy(this.director.enemyNumber);
-    const usable = diff.attacks.filter((k) => AttackDirector.supportedKinds.includes(k));
-    const attackKind = usable.length > 0 ? this.rng.pick(usable) : 'single';
-    this.sim.begin(profile, attackKind, diff.trackingMultiplier, this.rng.fork(entry.serial));
+    const attackKind = this.options.forceAttack ?? this.difficulty.chooseAttack(this.director.enemyNumber, this.rng, this.usedAttacks);
+    const isNew = !this.usedAttacks.has(attackKind) && attackKind !== 'single';
+    this.usedAttacks.add(attackKind);
+    this.attackKind = attackKind;
+    this.sim.begin(profile, attackKind, diff, this.rng.fork(entry.serial));
     this.aimRing.setRadius(profile.impactRadius);
-    this.hud.flash(`${this.director.enemyNumber}人目　${profile.name}`, GameConfig.timing.roundReady, 'info');
+    const label = `${this.director.enemyNumber}人目　${profile.name}`;
+    this.hud.flash(isNew ? `${label}\n新攻撃「${ATTACK_NAMES[attackKind]}」` : label, GameConfig.timing.roundReady, isNew ? 'bad' : 'info');
   }
 
   // ---------------------------------------------------------------- loop
@@ -308,7 +319,7 @@ export class Game {
       this.queueView.update(dt);
       this.marker.update(dt);
       this.updateAimRing(dt);
-      this.vfx.update(this.sim.impacts, this.visualTime);
+      this.vfx.update(this.sim.impacts, this.visualTime, dt);
     }
     this.updateHud(dt);
     this.renderer.render(this.world.scene, this.camera);
@@ -354,12 +365,17 @@ export class Game {
     const enemy = this.sim.enemy;
     const phase = this.director.phase;
     if (!enemy || (phase !== 'PLAYING' && phase !== 'HIT') || enemy.state === 'done') {
-      this.aimRing.update(dt, 0, 0, 'off');
+      this.aimRing.update(dt, [], 'off');
       return;
     }
-    const { u, v } = this.world.surface.fromMetric(enemy.aim.x, enemy.aim.y);
-    const mode = enemy.state === 'windup' || enemy.state === 'warning' ? 'warn' : enemy.state === 'paused' ? 'off' : 'live';
-    this.aimRing.update(dt, u, v, mode);
+    const attacks = this.sim.attacks;
+    // 予備動作中は、これから始まる攻撃の形（2WAYなら2つ）を点滅で予告する
+    const pattern = enemy.state === 'windup' ? attacks.patternAt(enemy.profile.windupSeconds) : attacks.pattern;
+    const surface = this.world.surface;
+    const points = attacks.offsets(pattern).map((o) => surface.fromMetric(enemy.aim.x + o.x, enemy.aim.y + o.y));
+    const mode =
+      enemy.state === 'windup' || enemy.state === 'warning' || pattern === 'gap' ? 'warn' : enemy.state === 'paused' ? 'off' : 'live';
+    this.aimRing.update(dt, points, mode);
   }
 
   private updateHud(dt: number): void {
@@ -370,6 +386,7 @@ export class Game {
         cleared: this.director.cleared,
         enemyNumber: this.director.enemyNumber,
         enemyName: current ? getProfile(current.kind).name : '',
+        attackName: enemy ? ATTACK_NAMES[this.attackKind] : '',
         remaining: enemy ? enemy.totalSeconds - enemy.elapsed : 0,
         total: enemy ? enemy.totalSeconds : 0,
         score: this.score.score,
