@@ -1,0 +1,41 @@
+import './styles.css';
+import { Game } from './game/Game';
+
+function webglAvailable(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
+
+function showFatal(root: HTMLElement, message: string): void {
+  root.innerHTML = '';
+  const box = document.createElement('div');
+  box.className = 'fatal';
+  const h = document.createElement('h1');
+  h.textContent = '的、逃走中。';
+  const p = document.createElement('p');
+  p.textContent = message;
+  box.append(h, p);
+  root.appendChild(box);
+}
+
+const root = document.getElementById('app');
+if (root) {
+  const params = new URLSearchParams(window.location.search);
+  const seedParam = params.get('seed');
+  const seed = seedParam !== null && /^\d+$/.test(seedParam) ? Number(seedParam) : null;
+  if (!webglAvailable()) {
+    showFatal(root, 'このブラウザでは WebGL が使えないため、ゲームを起動できません。最新の Chrome / Firefox / Safari でお試しください。');
+  } else {
+    try {
+      const game = new Game(root, { seed, lowQuality: params.has('low'), debug: params.has('debug'), god: params.has('debug') && params.has('god') });
+      game.start();
+    } catch (err) {
+      console.error(err);
+      showFatal(root, '3D描画の初期化に失敗しました。ハードウェアアクセラレーションが有効か確認してください。');
+    }
+  }
+}
