@@ -35,7 +35,7 @@ export class HUD {
   private queueKey = '';
   private messageTimer = 0;
 
-  constructor(parent: HTMLElement) {
+  constructor(parent: HTMLElement, onPause: () => void) {
     this.root = el('div', 'hud hidden', parent);
     const left = el('div', 'hud-panel hud-left', this.root);
     this.cleared = el('div', 'hud-cleared', left);
@@ -54,7 +54,14 @@ export class HUD {
     this.queue = el('ol', 'hud-queue-list', q);
 
     this.message = el('div', 'hud-message hidden', this.root);
-    el('div', 'hud-help', this.root).textContent = 'WASD / 矢印：移動　Esc：ポーズ';
+    el('div', 'hud-help hud-help-keys', this.root).textContent = 'WASD / 矢印：移動　Esc：ポーズ';
+    el('div', 'hud-help hud-help-touch', this.root).textContent = '画面をドラッグして移動';
+
+    const pause = el('button', 'hud-pause', this.root);
+    pause.type = 'button';
+    pause.setAttribute('aria-label', 'ポーズ');
+    pause.textContent = 'Ⅱ';
+    pause.addEventListener('click', onPause);
   }
 
   show(visible: boolean): void {

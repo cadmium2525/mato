@@ -31,7 +31,8 @@ if (root) {
     showFatal(root, 'このブラウザでは WebGL が使えないため、ゲームを起動できません。最新の Chrome / Firefox / Safari でお試しください。');
   } else {
     try {
-      const game = new Game(root, { seed, lowQuality: params.has('low'), debug: params.has('debug'), god: params.has('debug') && params.has('god') });
+      const touch = params.has('touch') || window.matchMedia?.('(pointer: coarse)').matches === true;
+      const game = new Game(root, { seed, lowQuality: params.has('low'), touch, debug: params.has('debug'), god: params.has('debug') && params.has('god') });
       game.start();
     } catch (err) {
       console.error(err);

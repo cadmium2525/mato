@@ -82,8 +82,16 @@ export const GameConfig = {
     roundClear: 500,
   },
 
+  /** 仮想スティック（px）。radius だけ指を動かすと最高速 */
+  touch: {
+    radius: 56,
+    deadzone: 6,
+  },
+
   render: {
     maxPixelRatio: 2,
+    /** スマホは発熱・電池を考慮して抑える */
+    maxPixelRatioTouch: 1.5,
     shadowMapSize: 1024,
   },
 } as const;

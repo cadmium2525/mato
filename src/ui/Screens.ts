@@ -40,13 +40,13 @@ export class Screens {
         <p class="title-lead">あなたは小便器の「的」。<br />襲いかかる小便を、何人分かわし続けられるか。</p>
         <button class="btn btn-primary" data-act="start">スタート <kbd>Enter</kbd></button>
         <dl class="controls">
-          <dt>移動</dt><dd>WASD / 矢印キー</dd>
-          <dt>ポーズ</dt><dd>Esc</dd>
-          <dt>演出スキップ</dt><dd>Enter / Space</dd>
+          <dt>移動</dt><dd><span class="keys-only">WASD / 矢印キー</span><span class="touch-only">画面をドラッグ</span></dd>
+          <dt>ポーズ</dt><dd><span class="keys-only">Esc</span><span class="touch-only">画面の Ⅱ ボタン</span></dd>
+          <dt>演出スキップ</dt><dd><span class="keys-only">Enter / Space</span><span class="touch-only">画面をタップ</span></dd>
         </dl>
         <p class="title-best" data-slot="best"></p>
       </div>`);
-    this.intro = this.make(`<p class="intro-text" data-slot="text"></p><p class="intro-skip">Enter でスキップ</p>`, 'screen-intro');
+    this.intro = this.make(`<p class="intro-text" data-slot="text"></p><p class="intro-skip">Enter / タップでスキップ</p>`, 'screen-intro');
     this.pause = this.make(`
       <div class="sign sign-small">
         <h2>一時停止中</h2>

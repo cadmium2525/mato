@@ -2,6 +2,7 @@ import { ACESFilmicToneMapping, PCFShadowMap, PerspectiveCamera, Vector3, WebGLR
 import { AttackDirector } from '../attacks/AttackDirector';
 import { getProfile } from '../entities/EnemyProfiles';
 import { InputManager, type ActionName } from '../input/InputManager';
+import { TouchJoystick } from '../input/TouchJoystick';
 import { CameraDirector } from '../scene/CameraDirector';
 import { QueueView } from '../scene/QueueView';
 import { RestroomScene } from '../scene/RestroomScene';
@@ -21,6 +22,8 @@ export interface GameOptions {
   /** 固定シード（URL ?seed=）。null なら毎回ランダム */
   seed: number | null;
   lowQuality: boolean;
+  /** タッチ主体の端末（スマホ・タブレット） */
+  touch: boolean;
   debug: boolean;
   /** デバッグ用（?debug&god）: 被弾を無視する。E2E確認用 */
   god: boolean;
@@ -39,6 +42,7 @@ export class Game {
   private readonly hud: HUD;
   private readonly screens: Screens;
   private readonly input: InputManager;
+  private readonly joystick: TouchJoystick;
   private readonly director: RoundDirector;
   private readonly score = new ScoreManager();
   private readonly best = new BestStore();
@@ -54,7 +58,8 @@ export class Game {
 
   constructor(private readonly container: HTMLElement, private readonly options: GameOptions) {
     this.renderer = new WebGLRenderer({ antialias: !options.lowQuality, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, options.lowQuality ? 1 : GameConfig.render.maxPixelRatio));
+    const maxRatio = options.lowQuality ? 1 : options.touch ? GameConfig.render.maxPixelRatioTouch : GameConfig.render.maxPixelRatio;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxRatio));
     this.renderer.toneMapping = ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.92;
     this.renderer.shadowMap.enabled = !options.lowQuality;
@@ -75,10 +80,18 @@ export class Game {
     this.queueView = new QueueView(GameConfig.queue.visibleSlots);
     this.world.scene.add(this.marker.mesh, this.aimRing.mesh, this.vfx.drops, this.vfx.splashes, this.queueView.group);
 
+    // キャンバスの上に仮想スティックの受付面、その上に HUD / 画面を重ねる
+    this.joystick = new TouchJoystick(container, GameConfig.touch);
+    this.joystick.onTap(() => {
+      const phase = this.director.phase;
+      if (phase === 'INTRO' || phase === 'QUEUE_PAN') this.director.skip();
+    });
+    container.classList.toggle('is-touch', options.touch);
+
     const overlay = document.createElement('div');
     overlay.className = 'overlay';
     container.appendChild(overlay);
-    this.hud = new HUD(overlay);
+    this.hud = new HUD(overlay, () => this.director.pause());
     this.screens = new Screens(overlay, {
       onStart: () => this.startGame(),
       onRetry: () => this.startGame(),
@@ -92,7 +105,10 @@ export class Game {
 
     this.input = new InputManager();
     this.input.onAction((a) => this.onAction(a));
-    this.input.onFocusLost(() => this.director.pause());
+    this.input.onFocusLost(() => {
+      this.joystick.release();
+      this.director.pause();
+    });
     window.addEventListener('resize', this.onResize);
     this.resize();
 
@@ -126,6 +142,7 @@ export class Game {
   dispose(): void {
     this.renderer.setAnimationLoop(null);
     this.input.dispose();
+    this.joystick.dispose();
     window.removeEventListener('resize', this.onResize);
     this.world.dispose();
     this.renderer.dispose();
@@ -164,6 +181,8 @@ export class Game {
   }
 
   private onPhaseChange(phase: Phase, prev: Phase): void {
+    // スティックは入場中から握っておけるが、移動はプレイ中のみ反映される
+    this.joystick.setEnabled(phase === 'ROUND_READY' || phase === 'PLAYING');
     if (prev === 'PAUSED' && phase !== 'TITLE') {
       this.screens.showPause(false);
       this.lastFrame = -1;
@@ -306,7 +325,7 @@ export class Game {
   }
 
   private stepOnce(step: number): void {
-    const r = this.sim.step(step, this.input.getMoveVector());
+    const r = this.sim.step(step, this.joystick.isActive ? this.joystick.getVector() : this.input.getMoveVector());
     this.visualTime = this.sim.time;
     if (r.hit && !this.options.god) {
       const uv = this.sim.player.uv;
@@ -373,9 +392,11 @@ export class Game {
     const aspect = w / h;
     this.camera.aspect = aspect;
     // 縦長画面でも便器の横幅が収まるよう、必要な水平画角から縦画角を決める
-    const minHFov = (44 * Math.PI) / 180;
+    const minHFov = (38 * Math.PI) / 180;
     const vFovForH = (2 * Math.atan(Math.tan(minHFov / 2) / aspect) * 180) / Math.PI;
-    this.camera.fov = Math.max(45, vFovForH);
+    // 横持ちスマホのような低い画面では HUD の分だけ少し引く
+    const baseFov = h < 500 ? 52 : 45;
+    this.camera.fov = Math.max(baseFov, vFovForH);
     this.camera.updateProjectionMatrix();
   }
 }
