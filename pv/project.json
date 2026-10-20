@@ -1,0 +1,270 @@
+{
+ "version": 1,
+ "name": "的、逃走中。PV",
+ "width": 1080,
+ "height": 1920,
+ "fps": 30,
+ "background": "#000000",
+ "fadeOut": 0,
+ "media": {
+  "open": {
+   "name": "open.webm"
+  },
+  "intro": {
+   "name": "intro.webm"
+  },
+  "queue": {
+   "name": "queue.webm"
+  },
+  "drunk": {
+   "name": "drunk.webm"
+  },
+  "elderly": {
+   "name": "elderly.webm"
+  },
+  "muscle": {
+   "name": "muscle.webm"
+  },
+  "clear": {
+   "name": "clear.webm"
+  },
+  "hit": {
+   "name": "hit.webm"
+  },
+  "title": {
+   "name": "title.webm"
+  },
+  "bgm": {
+   "name": "bgm.wav"
+  }
+ },
+ "clips": [
+  {
+   "media": "open",
+   "in": 0,
+   "out": 5.4545,
+   "speed": 1,
+   "fit": "cover"
+  },
+  {
+   "media": "intro",
+   "in": 0,
+   "out": 3.18,
+   "speed": 0.8745,
+   "fit": "cover"
+  },
+  {
+   "media": "queue",
+   "in": 0,
+   "out": 2.58,
+   "speed": 0.946,
+   "fit": "cover"
+  },
+  {
+   "media": "drunk",
+   "in": 0.4,
+   "out": 3.1273,
+   "speed": 1,
+   "fit": "cover"
+  },
+  {
+   "media": "elderly",
+   "in": 0.3,
+   "out": 3.0273,
+   "speed": 1,
+   "fit": "cover"
+  },
+  {
+   "media": "muscle",
+   "in": 0.45,
+   "out": 3.1773,
+   "speed": 1,
+   "fit": "cover"
+  },
+  {
+   "media": "clear",
+   "in": 0,
+   "out": 2.58,
+   "speed": 0.946,
+   "fit": "cover"
+  },
+  {
+   "media": "hit",
+   "in": 0.0015,
+   "out": 4.547,
+   "speed": 1,
+   "fit": "cover"
+  },
+  {
+   "media": "title",
+   "in": 0,
+   "out": 2.98,
+   "speed": 0.8195,
+   "fit": "cover"
+  }
+ ],
+ "texts": [
+  {
+   "text": "あなたは、的。",
+   "start": 0,
+   "end": 2.7273,
+   "style": "pop3d",
+   "size": 0.12,
+   "y": 0.335,
+   "anim": "none"
+  },
+  {
+   "text": "小便から\n逃げろ！",
+   "start": 2.7273,
+   "end": 5.4545,
+   "style": "telop",
+   "size": 0.1,
+   "y": 0.335,
+   "anim": "pop"
+  },
+  {
+   "text": "あなたは的です。\n襲いかかってくる小便から\n逃げてください。",
+   "start": 5.5909,
+   "end": 9.0909,
+   "style": "telop",
+   "size": 0.064,
+   "y": 0.5,
+   "bg": "rgba(0,0,0,0.55)",
+   "anim": "fade"
+  },
+  {
+   "text": "順番待ちの列から\n次々やってくる",
+   "start": 9.0909,
+   "end": 11.8182,
+   "style": "telop",
+   "size": 0.075,
+   "y": 0.86,
+   "anim": "slide"
+  },
+  {
+   "text": "酔っ払い",
+   "start": 11.8182,
+   "end": 14.5455,
+   "style": "label",
+   "size": 0.07,
+   "y": 0.81,
+   "anim": "pop"
+  },
+  {
+   "text": "照準がフラフラ＆3WAY",
+   "start": 12.0455,
+   "end": 14.5455,
+   "style": "telop",
+   "size": 0.062,
+   "y": 0.88,
+   "anim": "fade"
+  },
+  {
+   "text": "おじいちゃん",
+   "start": 14.5455,
+   "end": 17.2727,
+   "style": "label",
+   "size": 0.07,
+   "y": 0.81,
+   "anim": "pop"
+  },
+  {
+   "text": "止まった…と思ったら再開",
+   "start": 14.7727,
+   "end": 17.2727,
+   "style": "telop",
+   "size": 0.062,
+   "y": 0.88,
+   "anim": "fade"
+  },
+  {
+   "text": "マッチョ",
+   "start": 17.2727,
+   "end": 20,
+   "style": "label",
+   "size": 0.07,
+   "y": 0.81,
+   "anim": "pop"
+  },
+  {
+   "text": "散弾＆跳ね返り",
+   "start": 17.5,
+   "end": 20,
+   "style": "telop",
+   "size": 0.062,
+   "y": 0.88,
+   "anim": "fade"
+  },
+  {
+   "text": "かわし切れば「1人抜き」",
+   "start": 20,
+   "end": 22.7273,
+   "style": "yellow",
+   "size": 0.07,
+   "y": 0.86,
+   "anim": "pop"
+  },
+  {
+   "text": "何人抜けるか！？",
+   "start": 24.3682,
+   "end": 27.2727,
+   "style": "pop3d",
+   "size": 0.1,
+   "y": 0.085,
+   "anim": "pop"
+  },
+  {
+   "text": "ブラウザで無料プレイ",
+   "start": 27.5,
+   "end": 30.9091,
+   "style": "yellow",
+   "size": 0.07,
+   "y": 0.08,
+   "anim": "pop"
+  },
+  {
+   "text": "cadmium2525.github.io/mato",
+   "start": 27.7273,
+   "end": 30.9091,
+   "style": "label",
+   "size": 0.055,
+   "y": 0.92,
+   "anim": "slide"
+  }
+ ],
+ "effects": [
+  {
+   "type": "flash",
+   "start": 23.4591,
+   "end": 23.8091,
+   "intensity": 0.7
+  },
+  {
+   "type": "shake",
+   "start": 23.4591,
+   "end": 23.9591,
+   "intensity": 0.6
+  },
+  {
+   "type": "sparkle",
+   "start": 21.5909,
+   "end": 22.7273,
+   "intensity": 0.5
+  },
+  {
+   "type": "vignette",
+   "start": 5.4545,
+   "end": 9.0909,
+   "intensity": 0.5
+  }
+ ],
+ "audios": [
+  {
+   "media": "bgm",
+   "start": 0,
+   "volume": 1,
+   "fadeIn": 0,
+   "fadeOut": 0.6
+  }
+ ]
+}

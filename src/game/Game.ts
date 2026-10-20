@@ -4,6 +4,7 @@ import { AudioManager } from '../audio/AudioManager';
 import { getProfile } from '../entities/EnemyProfiles';
 import { InputManager, type ActionName } from '../input/InputManager';
 import { TouchJoystick } from '../input/TouchJoystick';
+import { createAutopilot, type Autopilot } from '../debug/Autopilot';
 import { CameraDirector } from '../scene/CameraDirector';
 import { QueueView } from '../scene/QueueView';
 import { RestroomScene } from '../scene/RestroomScene';
@@ -49,6 +50,10 @@ export interface GameOptions {
   forceAttack: AttackKind | null;
   /** 診断用（?audiodebug）: 画面の隅に音声の状態を出す（実機 iPhone の確認用） */
   audioDebug: boolean;
+  /** 撮影用（?debug&capture）: 自動では進めず、__MATO__.advance() で1コマずつ進める（PV の撮影） */
+  capture: boolean;
+  /** 撮影用（?debug&autopilot）: 見えている情報だけで避ける自動操縦 */
+  autopilot: boolean;
 }
 
 /** 描画・入力・ロジックを束ねるオーケストレーター */
@@ -79,6 +84,9 @@ export class Game {
   private snapshot: HTMLCanvasElement | null = null;
   private snapshotPending = false;
   private tutorialVisible = false;
+  private autopilot: Autopilot | null = null;
+  private autopilotOn = false;
+  private captureTime = 0;
   /** HIT 中のスロー演出用の表示時刻 */
   private visualTime = 0;
   private accumulator = 0;
@@ -108,6 +116,10 @@ export class Game {
     const surface = this.world.surface;
 
     this.sim = new RoundSimulation(surface);
+    if (options.autopilot) {
+      this.autopilot = createAutopilot(surface);
+      this.autopilotOn = true;
+    }
     this.marker = new TargetMarker(surface, this.sim.player.visualRadius);
     this.aimRing = new AimRing(surface, 0.026);
     const o = GameConfig.attack.origin;
@@ -179,6 +191,14 @@ export class Game {
       (window as unknown as Record<string, unknown>).__MATO__ = {
         /** デバッグ: カメラを任意の位置へ（見た目の確認用） */
         showCurrent: () => this.queueView.setCurrentVisible(true),
+        /** 撮影用: ms だけ時間を進める。render=false なら描画せずに早送り */
+        advance: (ms: number, render = true) => {
+          this.captureTime += ms;
+          this.frame(this.captureTime, render);
+        },
+        setAutopilot: (on: boolean) => {
+          this.autopilotOn = on && this.autopilot !== null;
+        },
         camera: (pos: [number, number, number], target: [number, number, number]) => {
           this.camera.position.set(...pos);
           this.camera.lookAt(...target);
@@ -502,7 +522,7 @@ export class Game {
 
   // ---------------------------------------------------------------- loop
 
-  private frame(time: number): void {
+  private frame(time: number, render = true): void {
     const raw = this.lastFrame < 0 ? 0 : (time - this.lastFrame) / 1000;
     this.lastFrame = time;
     const dt = Math.min(raw, GameConfig.simulation.maxFrameDelta);
@@ -532,6 +552,7 @@ export class Game {
       this.audio.updateStream(dt, 0, 0);
     }
     this.updateHud(dt);
+    if (!render) return;
     this.renderer.render(this.world.scene, this.camera);
     if (this.snapshotPending && this.cameraDirector.isSettled) {
       this.snapshotPending = false;
@@ -574,7 +595,13 @@ export class Game {
   }
 
   private stepOnce(step: number): void {
-    const r = this.sim.step(step, this.joystick.isActive ? this.joystick.getVector() : this.input.getMoveVector());
+    const move =
+      this.autopilotOn && this.autopilot
+        ? this.autopilot(this.sim)
+        : this.joystick.isActive
+          ? this.joystick.getVector()
+          : this.input.getMoveVector();
+    const r = this.sim.step(step, move);
     this.visualTime = this.sim.time;
     if (r.hit && !this.options.god) {
       const uv = this.sim.player.uv;

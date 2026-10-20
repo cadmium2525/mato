@@ -41,8 +41,13 @@ if (root) {
       const debug = params.has('debug');
       const attackParam = params.get('attack') as AttackKind | null;
       const forceAttack = debug && attackParam && AttackDirector.supportedKinds.includes(attackParam) ? attackParam : null;
-      const game = new Game(root, { seed, lowQuality: params.has('low'), touch, debug, god: debug && params.has('god'), forceAttack, audioDebug: params.has('audiodebug') });
-      game.start();
+      const game = new Game(root, { seed, lowQuality: params.has('low'), touch, debug, god: debug && params.has('god'), forceAttack,
+        audioDebug: params.has('audiodebug'),
+        capture: debug && params.has('capture'),
+        autopilot: debug && params.has('autopilot'),
+      });
+      // 撮影モードでは自動で進めない（__MATO__.advance で1コマずつ）
+      if (!(debug && params.has('capture'))) game.start();
     } catch (err) {
       console.error(err);
       showFatal(root, '3D描画の初期化に失敗しました。ハードウェアアクセラレーションが有効か確認してください。');

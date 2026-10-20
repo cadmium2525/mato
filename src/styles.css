@@ -342,3 +342,4 @@ html, body, #app {
   padding: 4px 8px; font-size: 12px; color: #fff; background: rgba(0, 0, 0, 0.6); border-radius: 4px;
   pointer-events: none; z-index: 10; white-space: nowrap;
 }
+.intro-sentence { display: inline-block; }

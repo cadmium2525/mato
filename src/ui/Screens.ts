@@ -157,7 +157,15 @@ export class Screens {
   showIntro(text: string): void {
     this.hideAll();
     const t = this.slot(this.intro, 'text');
-    t.textContent = text;
+    // 文の切れ目（「。」の後）でだけ折り返す（縦長の画面で「くださ／い。」のように切れない）
+    t.replaceChildren(
+      ...(text.match(/[^。]+。?/g) ?? [text]).map((sentence) => {
+        const span = document.createElement('span');
+        span.className = 'intro-sentence';
+        span.textContent = sentence;
+        return span;
+      }),
+    );
     t.classList.remove('fade-in');
     void t.offsetWidth;
     t.classList.add('fade-in');

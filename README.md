@@ -72,6 +72,8 @@ Three.js + TypeScript + Vite の完全クライアントサイド構成で、Git
 | `?debug` | `window.__MATO__.state()` で内部状態を参照可能（E2E確認用） |
 | `?debug&god` | デバッグ用の無敵モード（被弾を無視） |
 | `?debug&attack=shotgun` | デバッグ用に攻撃の種類を固定（single / twoWay / threeWay / shotgun / combo） |
+| `?debug&capture` | 撮影用: 自動で進めず `window.__MATO__.advance(ms)` で1コマずつ進める（PV 撮影。`pv/README.md`） |
+| `?debug&autopilot` | 撮影用: 見えている情報だけで避ける自動操縦（`src/debug/Autopilot.ts`、公平性テストと同じボット） |
 
 ## ローカル開発
 
