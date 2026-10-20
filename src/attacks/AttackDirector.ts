@@ -57,6 +57,7 @@ export class AttackDirector {
   private nextVolleyAt = 0;
   private primaryCount = 0;
   private current: ActivePattern = 'gap';
+  private now = 0;
 
   constructor(private readonly tuning: Tuning = GameConfig.attack) {}
 
@@ -68,6 +69,7 @@ export class AttackDirector {
     this.nextVolleyAt = 0;
     this.primaryCount = 0;
     this.current = 'gap';
+    this.now = 0;
   }
 
   beginRound(opts: RoundAttackOptions): void {
@@ -90,12 +92,29 @@ export class AttackDirector {
     return this.segmentAt(t)?.pattern ?? 'gap';
   }
 
+  /**
+   * 2WAY の開き具合（1=全開、0=2本が照準で重なる）と、閉じる予告中かどうか。
+   * 2WAY 区間の開始からの経過時間で決まる（区間外・予備動作中は全開）
+   */
+  twoWayState(t = this.now): { openness: number; warning: boolean } {
+    const seg = this.segmentAt(t);
+    if (!seg || seg.pattern !== 'twoWay') return { openness: 1, warning: false };
+    const c = this.tuning.twoWayCycle;
+    const cycle = c.open + c.close + c.hold + c.reopen;
+    const k = (t - seg.from) % cycle;
+    const smooth = (x: number): number => x * x * (3 - 2 * x);
+    if (k < c.open) return { openness: 1, warning: k >= c.open - c.warn };
+    if (k < c.open + c.close) return { openness: 1 - smooth((k - c.open) / c.close), warning: true };
+    if (k < c.open + c.close + c.hold) return { openness: 0, warning: true };
+    return { openness: smooth((k - c.open - c.close - c.hold) / c.reopen), warning: false };
+  }
+
   /** 照準に対する尿流の着弾オフセット（照準リングの表示にも使う） */
   offsets(pattern: ActivePattern): Vec2[] {
     switch (pattern) {
       case 'twoWay': {
         const r = this.opts?.profile.impactRadius ?? 0;
-        const h = r + this.tuning.twoWayClear / 2;
+        const h = (r + this.tuning.twoWayClear / 2) * this.twoWayState().openness;
         return [{ x: -h, y: 0 }, { x: h, y: 0 }];
       }
       case 'threeWay': {
@@ -112,6 +131,7 @@ export class AttackDirector {
     const opts = this.opts;
     const out: Impact[] = [];
     if (!opts) return out;
+    this.now = ctx.now;
     const seg = this.segmentAt(ctx.now);
     this.current = seg?.pattern ?? 'gap';
 

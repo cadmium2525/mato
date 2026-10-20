@@ -101,7 +101,21 @@ function plannerBot(): Bot {
 }
 
 describe('RoundSimulation', () => {
-  it('動かない的にはいずれ命中する', () => {
+  // 隙間や扇の要に居座れば当たらない、という攻略法を作らない（2WAY の隙間に置きっぱなしで避けられた不具合の再発防止）
+  it('どの攻撃でも、動かない的にはいずれ命中する', () => {
+    const difficulty = new DifficultyDirector();
+    const cases: Array<[AttackKind, number]> = [['single', 1], ['twoWay', 4], ['threeWay', 8], ['shotgun', 13], ['combo', 18]];
+    for (const [attack, n] of cases) {
+      for (const kind of ENEMY_KINDS) {
+        for (const seed of [1, 2, 3]) {
+          const r = runRound(kind, seed, idle, difficulty.forEnemy(n), attack);
+          expect(r.outcome, `${attack} × ${kind} seed ${seed}`).toBe('hit');
+        }
+      }
+    }
+  });
+
+  it('動かない的にはいずれ命中する（予備動作中は当たらない）', () => {
     for (const kind of ENEMY_KINDS) {
       const r = runRound(kind, 1, idle);
       expect(r.outcome).toBe('hit');

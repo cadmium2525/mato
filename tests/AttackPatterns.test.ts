@@ -60,6 +60,39 @@ describe('2WAY', () => {
   });
 });
 
+describe('2WAY の開閉', () => {
+  it('開いている間は隙間があり、周期的に閉じて照準で重なる', () => {
+    const { d, profile } = director('twoWay');
+    const c = GameConfig.attack.twoWayCycle;
+    const start = profile.windupSeconds;
+    expect(d.twoWayState(start + 0.1).openness).toBe(1);
+    expect(d.twoWayState(start + c.open + c.close + c.hold * 0.5).openness).toBe(0);
+    // 1周期後にまた開く
+    const cycle = c.open + c.close + c.hold + c.reopen;
+    expect(d.twoWayState(start + cycle + 0.1).openness).toBe(1);
+  });
+
+  it('隙間が的の判定より狭くなる前に、十分な予告（照準リングの点滅）がある', () => {
+    const { d, profile } = director('twoWay');
+    const r = profile.impactRadius;
+    const full = r + GameConfig.attack.twoWayClear / 2;
+    const start = profile.windupSeconds;
+    let warnedAt: number | null = null;
+    let blockedAt: number | null = null;
+    for (let t = start; t < start + 3; t += 0.005) {
+      const s = d.twoWayState(t);
+      if (s.warning && warnedAt === null) warnedAt = t;
+      // 内側の空き = 2 × (中心のずれ − 着弾半径) が的の判定直径を下回った時刻
+      const clear = 2 * (full * s.openness - r);
+      if (clear < player.hitRadius * 2 && blockedAt === null) blockedAt = t;
+    }
+    expect(warnedAt).not.toBeNull();
+    expect(blockedAt).not.toBeNull();
+    // 予告から隙間が塞がるまで、照準が届くまでの飛行時間を除いても 0.4 秒以上ある
+    expect(blockedAt! - warnedAt! + profile.timeToImpact).toBeGreaterThanOrEqual(0.4);
+  });
+});
+
 describe('3WAY', () => {
   it('中央＋左右下の3本。照準と同じ高さを横へ逃げる道が空いている（全キャラ）', () => {
     for (const kind of ENEMY_KINDS) {

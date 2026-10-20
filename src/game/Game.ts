@@ -618,8 +618,14 @@ export class Game {
       .offsets(pattern)
       .map((o) => surface.fromMetric(enemy.aim.x + o.x, enemy.aim.y + o.y))
       .filter((p) => p.u >= -0.15 && p.u <= 1.15 && p.v >= -0.1 && p.v <= 1.05);
+    // 2WAY が閉じる直前・閉じている間も点滅で予告する
+    const closing = pattern === 'twoWay' && attacks.twoWayState().warning;
     const mode =
-      enemy.state === 'windup' || enemy.state === 'warning' || pattern === 'gap' ? 'warn' : enemy.state === 'paused' ? 'off' : 'live';
+      enemy.state === 'windup' || enemy.state === 'warning' || pattern === 'gap' || closing
+        ? 'warn'
+        : enemy.state === 'paused'
+          ? 'off'
+          : 'live';
     this.aimRing.update(dt, points, mode);
   }
 
