@@ -13,6 +13,19 @@ export interface HudState {
   upcoming: ReadonlyArray<{ serial: number; kind: EnemyKind; name: string }>;
 }
 
+/*
+ * ボタンのアイコンは SVG（文字や絵文字はフォントごとに余白が違い、円の中心からずれるため）。
+ * viewBox 24×24 の中央に描き、currentColor で塗る
+ */
+const svg = (body: string): string =>
+  `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">${body}</svg>`;
+const ICON_PAUSE = svg('<rect x="6.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="13.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/>');
+const SPEAKER = '<path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" fill="currentColor"/>';
+const ICON_SOUND_ON = svg(
+  `${SPEAKER}<path d="M15 9.2a4 4 0 0 1 0 5.6M17.6 6.8a7.4 7.4 0 0 1 0 10.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+);
+const ICON_SOUND_OFF = svg(`${SPEAKER}<path d="M15.5 9.5l5 5m0-5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`);
+
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, parent?: HTMLElement): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
   e.className = className;
@@ -63,7 +76,7 @@ export class HUD {
     const pause = el('button', 'hud-pause', this.root);
     pause.type = 'button';
     pause.setAttribute('aria-label', 'ポーズ');
-    pause.textContent = 'Ⅱ';
+    pause.innerHTML = ICON_PAUSE;
     pause.addEventListener('click', onPause);
 
     this.soundBtn = el('button', 'hud-sound', this.root);
@@ -73,7 +86,7 @@ export class HUD {
   }
 
   setSound(on: boolean): void {
-    this.soundBtn.textContent = on ? '🔊' : '🔇';
+    this.soundBtn.innerHTML = on ? ICON_SOUND_ON : ICON_SOUND_OFF;
     this.soundBtn.setAttribute('aria-label', on ? 'サウンドをOFFにする' : 'サウンドをONにする');
   }
 

@@ -218,21 +218,27 @@ html, body, #app {
   transform: translate(-50%, -50%);
 }
 
-.hud-pause {
+/* ポーズ・サウンドの丸ボタン（同じ大きさで上中央に並べる。アイコンは SVG を中央配置） */
+.hud-pause, .hud-sound {
   position: absolute;
   top: calc(16px + env(safe-area-inset-top));
-  left: 50%; transform: translateX(-50%);
-  width: 48px; height: 48px;
-  pointer-events: auto;
-  font: inherit; font-size: 18px; font-weight: 800;
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; margin: 0; line-height: 0;
   color: var(--sign-ink);
+  pointer-events: auto;
   background: var(--sign-bg);
   border: 1px solid var(--sign-line);
   border-radius: 50%;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
   cursor: pointer;
   touch-action: manipulation;
+  -webkit-appearance: none;
+  appearance: none;
 }
+.hud-pause svg, .hud-sound svg { display: block; flex: none; }
+.hud-pause { left: calc(50% - 50px); }
+.hud-sound { left: calc(50% + 6px); }
 .hud-pause:focus-visible { outline: 3px solid var(--warn); outline-offset: 2px; }
 
 .touch-only, .hud-help-touch { display: none; }
@@ -258,7 +264,7 @@ html, body, #app {
   .hud-enemy { font-size: 11px; }
   .hud-score { font-size: 16px; }
   .hud-near, .hud-remaining { font-size: 11px; }
-  .hud-pause { top: calc(10px + env(safe-area-inset-top)); width: 44px; height: 44px; }
+  .hud-pause, .hud-sound { top: calc(10px + env(safe-area-inset-top)); }
   .hud-queue { bottom: auto; top: calc(86px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); max-width: 46vw; padding: 5px 8px; }
   .hud-queue-list { gap: 4px; }
   .chip { font-size: 10px; padding: 2px 6px; }
@@ -280,7 +286,7 @@ html, body, #app {
   .title-lead { margin-bottom: 10px; }
   .hud-queue { top: auto; bottom: calc(10px + env(safe-area-inset-bottom)); }
   /* 便器の上端と重ならないよう、ポーズボタンは左下へ */
-  .hud-pause { top: auto; left: calc(10px + env(safe-area-inset-left)); bottom: calc(10px + env(safe-area-inset-bottom)); transform: none; }
+  .hud-pause { top: auto; left: calc(10px + env(safe-area-inset-left)); bottom: calc(10px + env(safe-area-inset-bottom)); }
 }
 .is-touch kbd { display: none; }
 
@@ -311,22 +317,8 @@ html, body, #app {
 .share-sub { background: #fff; color: var(--sign-ink); border-color: var(--sign-line); font-weight: 700; }
 .share-status { margin: 6px 0 0; min-height: 1.2em; font-size: 12px; color: var(--good); font-weight: 700; }
 
-.hud-sound {
-  position: absolute;
-  top: calc(16px + env(safe-area-inset-top));
-  left: calc(50% + 34px);
-  width: 40px; height: 40px;
-  pointer-events: auto;
-  font-size: 18px; line-height: 1;
-  background: var(--sign-bg); border: 1px solid var(--sign-line); border-radius: 50%;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); cursor: pointer;
-  touch-action: manipulation;
-}
-@media (max-width: 640px), (max-height: 500px) {
-  .hud-sound { top: calc(12px + env(safe-area-inset-top)); left: calc(50% + 30px); width: 38px; height: 38px; }
-}
 @media (max-height: 500px) {
-  .hud-sound { top: auto; left: calc(64px + env(safe-area-inset-left)); bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .hud-sound { top: auto; left: calc(62px + env(safe-area-inset-left)); bottom: calc(10px + env(safe-area-inset-bottom)); }
 }
 
 .screen-tutorial { align-items: flex-end; background: none; pointer-events: none; padding-bottom: 16vh; }
