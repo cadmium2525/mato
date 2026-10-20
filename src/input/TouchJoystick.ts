@@ -93,6 +93,9 @@ export class TouchJoystick {
     this.layer.addEventListener('pointerup', this.onUp);
     this.layer.addEventListener('pointercancel', this.onUp);
     this.layer.addEventListener('contextmenu', (e) => e.preventDefault());
+    // iOS の長押し（文字選択・共有メニュー・拡大鏡）とダブルタップ拡大を止める。
+    // Pointer Events の preventDefault では止まらないので touchstart で止める（ボタンはこの層の上にあるので影響しない）
+    this.layer.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
   }
 
   /** 移動を受け付けるかどうか（プレイ中のみ有効） */

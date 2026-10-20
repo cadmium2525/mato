@@ -24,6 +24,10 @@ function showFatal(root: HTMLElement, message: string): void {
   root.appendChild(box);
 }
 
+// iOS: 長押しの文字選択・ピンチ拡大のジェスチャーを止める
+document.addEventListener('selectstart', (e) => e.preventDefault());
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+
 const root = document.getElementById('app');
 if (root) {
   const params = new URLSearchParams(window.location.search);

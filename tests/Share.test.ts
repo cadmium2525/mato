@@ -35,7 +35,7 @@ describe('buildShareText', () => {
     expect(buildShareText({ ...record, isNewBest: false })).not.toContain('自己ベスト更新');
   });
   it('X の上限（280字・日本語は2字換算）に収まる長さ', () => {
-    const url = 'https://cadmium2525.github.io/mato/?seed=999999';
+    const url = 'https://cadmium2525.github.io/mato/';
     const text = buildShareText({ ...record, cleared: 999, score: 99999999 });
     // URL は 23 字換算、ハッシュタグ込みで概算
     const weighted = [...text].reduce((n, ch) => n + (ch.charCodeAt(0) > 0x7f ? 2 : 1), 0) + 23 + HASHTAG.length * 2 + 2;
@@ -45,14 +45,14 @@ describe('buildShareText', () => {
 });
 
 describe('buildShareUrl', () => {
-  it('debug などのパラメータを消し、seed だけ付ける', () => {
-    expect(buildShareUrl('https://example.github.io/mato/?debug&god#x', 12)).toBe('https://example.github.io/mato/?seed=12');
+  it('debug や seed などのパラメータを付けない', () => {
+    expect(buildShareUrl('https://example.github.io/mato/?debug&god&seed=5#x')).toBe('https://example.github.io/mato/');
     expect(buildShareUrl('https://example.github.io/mato/index.html?low')).toBe('https://example.github.io/mato/index.html');
   });
 });
 
 describe('投稿用 URL', () => {
-  const url = 'https://example.github.io/mato/?seed=12';
+  const url = 'https://example.github.io/mato/';
   const text = buildShareText(record);
 
   it('X: 本文・URL・ハッシュタグがエンコードされて入る', () => {

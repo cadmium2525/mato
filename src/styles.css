@@ -187,6 +187,12 @@ kbd {
 }
 
 /* ---------- タッチ / スマホ ---------- */
+/* iOS で長押しすると文字選択の「共有…」メニューが出るので、全要素で選択と吹き出しを止める */
+*, *::before, *::after {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 html, body, #app {
   touch-action: none;
   overscroll-behavior: none;

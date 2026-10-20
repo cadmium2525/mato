@@ -37,10 +37,29 @@ export class AudioManager {
     const activation = (navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation;
     if (activation && !activation.isActive) return;
     try {
+      // iOS Safari は別アプリへ移ると state が 'interrupted' になる（'suspended' だけ見ていると戻せない）。
+      // 閉じられていたら作り直す
+      if (this.ctx && (this.ctx.state as string) === 'closed') this.ctx = null;
       if (!this.ctx) this.init();
-      if (this.ctx && this.ctx.state === 'suspended') void this.ctx.resume();
+      if (this.ctx && this.ctx.state !== 'running') void this.ctx.resume().catch(() => undefined);
     } catch {
       this.ctx = null;
+    }
+  }
+
+  /** ページが隠れた／戻ったとき（visibilitychange）。隠れている間は止め、戻ったら再開を試みる */
+  setPageVisible(visible: boolean): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    try {
+      if (!visible) {
+        if (ctx.state === 'running') void ctx.suspend().catch(() => undefined);
+      } else if (this.enabled && ctx.state !== 'running') {
+        // ユーザー操作なしでは再開できない環境もある。その場合は次のタップ（unlock）で再開する
+        void ctx.resume().catch(() => undefined);
+      }
+    } catch {
+      // 何もしない（音が出ないだけでゲームは続行）
     }
   }
 

@@ -146,9 +146,14 @@ export class Game {
     });
     this.applySettings();
     // 自動再生制限: 最初の操作で音を有効にする
+    // 自動再生制限・iOS の中断から復帰するため、操作のたびに再開を試みる
     const unlock = (): void => this.audio.unlock();
-    window.addEventListener('pointerdown', unlock, { passive: true });
-    window.addEventListener('keydown', unlock);
+    // （タッチでは pointerdown はユーザー操作として扱われず、pointerup / touchend / click が扱われる）
+    for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) {
+      window.addEventListener(type, unlock, { passive: true });
+    }
+    document.addEventListener('visibilitychange', () => this.audio.setPageVisible(!document.hidden));
+    window.addEventListener('pageshow', () => this.audio.setPageVisible(true));
 
     this.input = new InputManager();
     this.input.onAction((a) => this.onAction(a));
@@ -260,7 +265,7 @@ export class Game {
   private async share(target: ShareTarget): Promise<void> {
     const r = this.lastRecord;
     if (!r) return;
-    const url = buildShareUrl(new URL(import.meta.env.BASE_URL, window.location.href).toString(), r.seed);
+    const url = buildShareUrl(new URL(import.meta.env.BASE_URL, window.location.href).toString());
     const text = buildShareText(r);
     this.audio.click();
     switch (target) {

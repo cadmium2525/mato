@@ -15,12 +15,11 @@ export interface ShareRecord {
 export const HASHTAG = '的逃走中';
 export const GAME_TITLE = '的、逃走中。';
 
-/** 共有する URL。seed を付けると、開いた人が同じ待機列で挑戦できる */
-export function buildShareUrl(base: string, seed?: number): string {
+/** 共有する URL（クエリ・ハッシュは付けない。debug などのパラメータも消す） */
+export function buildShareUrl(base: string): string {
   const url = new URL(base);
   url.search = '';
   url.hash = '';
-  if (seed !== undefined) url.searchParams.set('seed', String(seed));
   return url.toString();
 }
 
@@ -29,7 +28,7 @@ export function buildShareText(r: ShareRecord): string {
     `『${GAME_TITLE}』で${r.cleared}人抜き！${r.isNewBest ? '（自己ベスト更新）' : ''}`,
     `スコア ${r.score.toLocaleString('ja-JP')}／ニアミス ${r.nearMisses}回／生存 ${r.survivalTime.toFixed(1)}秒`,
     `清掃員の評価「${r.comment}」`,
-    `同じ順番待ちの列で挑戦→`,
+    `あなたは何人抜けますか？→`,
   ];
   return lines.join('\n');
 }
