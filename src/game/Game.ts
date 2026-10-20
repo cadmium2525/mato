@@ -47,6 +47,8 @@ export interface GameOptions {
   god: boolean;
   /** デバッグ用（?debug&attack=shotgun）: 攻撃の種類を固定する */
   forceAttack: AttackKind | null;
+  /** 診断用（?audiodebug）: 画面の隅に音声の状態を出す（実機 iPhone の確認用） */
+  audioDebug: boolean;
 }
 
 /** 描画・入力・ロジックを束ねるオーケストレーター */
@@ -153,7 +155,13 @@ export class Game {
       window.addEventListener(type, unlock, { passive: true });
     }
     document.addEventListener('visibilitychange', () => this.audio.setPageVisible(!document.hidden));
-    window.addEventListener('pageshow', () => this.audio.setPageVisible(true));
+    if (options.audioDebug) {
+      const label = document.createElement('div');
+      label.className = 'audio-debug';
+      container.appendChild(label);
+      window.setInterval(() => (label.textContent = this.audio.debugLabel), 300);
+    }
+    window.addEventListener('pagehide', () => this.audio.setPageVisible(false));
 
     this.input = new InputManager();
     this.input.onAction((a) => this.onAction(a));

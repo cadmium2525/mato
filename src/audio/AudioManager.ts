@@ -24,6 +24,12 @@ export class AudioManager {
     return this.enabled;
   }
 
+  /** 診断用（?audiodebug）: 現在の状態と、AudioContext を作った回数 */
+  private created = 0;
+  get debugLabel(): string {
+    return `audio: ${this.enabled ? 'ON' : 'OFF'} / ${this.ctx ? this.ctx.state : 'なし'} / 作成${this.created}回`;
+  }
+
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(enabled ? 0.7 : 0, this.ctx.currentTime, 0.02);
@@ -37,29 +43,56 @@ export class AudioManager {
     const activation = (navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation;
     if (activation && !activation.isActive) return;
     try {
-      // iOS Safari は別アプリへ移ると state が 'interrupted' になる（'suspended' だけ見ていると戻せない）。
-      // 閉じられていたら作り直す
-      if (this.ctx && (this.ctx.state as string) === 'closed') this.ctx = null;
-      if (!this.ctx) this.init();
+      // iOS Safari は別アプリ・通知などで state が 'interrupted' になり、resume() しても
+      // 「running なのに無音」のまま戻らないことがある。中断・クローズされていたら作り直す
+      const state = this.ctx?.state as string | undefined;
+      if (state === 'interrupted' || state === 'closed') this.teardown();
+      if (!this.ctx) {
+        this.init();
+        this.kick();
+      }
       if (this.ctx && this.ctx.state !== 'running') void this.ctx.resume().catch(() => undefined);
     } catch {
       this.ctx = null;
     }
   }
 
-  /** ページが隠れた／戻ったとき（visibilitychange）。隠れている間は止め、戻ったら再開を試みる */
+  /**
+   * ページが隠れたとき（visibilitychange / pagehide）は AudioContext を閉じる。
+   * 戻ってきた後の最初のユーザー操作（unlock）で作り直す。iOS では、中断された
+   * AudioContext を操作なしで再開しようとすると無音のまま固まるので、戻った瞬間には何もしない
+   */
   setPageVisible(visible: boolean): void {
+    if (!visible) this.teardown();
+  }
+
+  private teardown(): void {
+    const ctx = this.ctx;
+    this.ctx = null;
+    this.master = null;
+    this.streamGain = null;
+    this.streamFilter = null;
+    this.streamPan = null;
+    this.noise = null;
+    this.streamLevel = 0;
+    try {
+      if (ctx && (ctx.state as string) !== 'closed') void ctx.close().catch(() => undefined);
+    } catch {
+      // 閉じられなくても新しいコンテキストで続行する
+    }
+  }
+
+  /** iOS: ユーザー操作の中で無音を1サンプル鳴らし、出力経路を確実に有効にする */
+  private kick(): void {
     const ctx = this.ctx;
     if (!ctx) return;
     try {
-      if (!visible) {
-        if (ctx.state === 'running') void ctx.suspend().catch(() => undefined);
-      } else if (this.enabled && ctx.state !== 'running') {
-        // ユーザー操作なしでは再開できない環境もある。その場合は次のタップ（unlock）で再開する
-        void ctx.resume().catch(() => undefined);
-      }
+      const src = ctx.createBufferSource();
+      src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+      src.connect(ctx.destination);
+      src.start(0);
     } catch {
-      // 何もしない（音が出ないだけでゲームは続行）
+      // 失敗しても通常の再生は試みる
     }
   }
 
@@ -68,6 +101,7 @@ export class AudioManager {
     if (!Ctor) return;
     const ctx = new Ctor();
     this.ctx = ctx;
+    this.created += 1;
     this.master = ctx.createGain();
     this.master.gain.value = this.enabled ? 0.7 : 0;
     this.master.connect(ctx.destination);

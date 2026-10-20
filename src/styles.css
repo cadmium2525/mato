@@ -336,3 +336,9 @@ html, body, #app {
 .tut-ring { display: inline-block; width: 14px; height: 14px; border-radius: 50%; vertical-align: -2px; margin-right: 4px; }
 .tut-aim { border: 3px solid #ffc81e; }
 .tut-warn { border: 3px solid #ff5a1f; }
+
+.audio-debug {
+  position: absolute; left: 50%; bottom: calc(60px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  padding: 4px 8px; font-size: 12px; color: #fff; background: rgba(0, 0, 0, 0.6); border-radius: 4px;
+  pointer-events: none; z-index: 10; white-space: nowrap;
+}

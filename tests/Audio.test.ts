@@ -35,6 +35,9 @@ class FakeContext {
   suspend = vi.fn(async () => {
     this.state = 'suspended';
   });
+  close = vi.fn(async () => {
+    this.state = 'closed';
+  });
   constructor() {
     FakeContext.instances.push(this);
   }
@@ -67,26 +70,55 @@ function setup(isActive = true) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('AudioManager', () => {
-  it('iOS で別アプリから戻ったとき（interrupted）、次の操作で再開する', () => {
+  it('iOS で中断された（interrupted）AudioContext は、次の操作で閉じて作り直す', () => {
     setup();
     const a = new AudioManager(true);
     a.unlock();
-    const ctx = FakeContext.instances[0];
-    ctx.state = 'interrupted';
+    const old = FakeContext.instances[0];
+    old.state = 'interrupted';
     a.unlock();
-    expect(ctx.resume).toHaveBeenCalled();
+    expect(old.close).toHaveBeenCalled();
+    expect(FakeContext.instances).toHaveLength(2);
+    expect(FakeContext.instances[1].state).toBe('running');
   });
 
-  it('ページが隠れたら止め、戻ったら再開を試みる', () => {
+  it('ページが隠れたら閉じ、戻っただけでは作らず、次の操作で作り直す', () => {
+    setup();
+    const a = new AudioManager(true);
+    a.unlock();
+    const old = FakeContext.instances[0];
+    a.setPageVisible(false);
+    expect(old.close).toHaveBeenCalled();
+    a.setPageVisible(true);
+    expect(FakeContext.instances).toHaveLength(1);
+    a.unlock();
+    expect(FakeContext.instances).toHaveLength(2);
+  });
+
+  it('作り直した後も効果音を鳴らせる（例外にならない）', () => {
+    setup();
+    const a = new AudioManager(true);
+    a.unlock();
+    a.setPageVisible(false);
+    a.updateStream(0.016, 1, 0);
+    a.hit();
+    a.unlock();
+    expect(() => {
+      a.updateStream(0.016, 1, 0);
+      a.hit();
+      a.flush();
+    }).not.toThrow();
+  });
+
+  it('一時停止（suspended）なら作り直さず再開する', () => {
     setup();
     const a = new AudioManager(true);
     a.unlock();
     const ctx = FakeContext.instances[0];
-    a.setPageVisible(false);
-    expect(ctx.suspend).toHaveBeenCalled();
     ctx.state = 'suspended';
-    a.setPageVisible(true);
+    a.unlock();
     expect(ctx.resume).toHaveBeenCalled();
+    expect(FakeContext.instances).toHaveLength(1);
   });
 
   it('閉じられた AudioContext は作り直す', () => {

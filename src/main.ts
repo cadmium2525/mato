@@ -41,7 +41,7 @@ if (root) {
       const debug = params.has('debug');
       const attackParam = params.get('attack') as AttackKind | null;
       const forceAttack = debug && attackParam && AttackDirector.supportedKinds.includes(attackParam) ? attackParam : null;
-      const game = new Game(root, { seed, lowQuality: params.has('low'), touch, debug, god: debug && params.has('god'), forceAttack });
+      const game = new Game(root, { seed, lowQuality: params.has('low'), touch, debug, god: debug && params.has('god'), forceAttack, audioDebug: params.has('audiodebug') });
       game.start();
     } catch (err) {
       console.error(err);
