@@ -142,6 +142,9 @@ export class Screens {
   }
 
   hideAll(): void {
+    // 非表示にしたボタンにフォーカスが残ると、次の Enter で押されてしまう（演出スキップのつもりが再スタート）
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && this.parent.contains(active)) active.blur();
     for (const s of [this.title, this.intro, this.pause, this.result, this.caption, this.tutorial]) s.classList.add('hidden');
   }
 

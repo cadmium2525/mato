@@ -9,7 +9,7 @@ interface Tracked {
   leaving: boolean;
 }
 
-const STAND = new Vector3(0, 0, 0.66);
+const STAND = new Vector3(0, 0, 0.7);
 const EXIT = new Vector3(-2.0, 0, 1.0);
 const WALK_SPEED = 1.7;
 
@@ -34,6 +34,7 @@ export class QueueView {
       t.target.copy(STAND);
       t.facing = Math.PI; // 壁（-z）を向く
       t.leaving = false;
+      t.person.setPose('urinal');
     }
     this.currentSerial = current?.serial ?? null;
     upcoming.slice(0, this.visibleSlots).forEach((entry, i) => {
@@ -42,12 +43,14 @@ export class QueueView {
       const t = this.ensure(entry, this.slotPosition(i + 1));
       t.target.copy(pos);
       t.facing = -Math.PI / 2; // 便器の方（-x）を向く
+      t.person.setPose('stand');
     });
     for (const [serial, t] of this.tracked) {
       if (!keep.has(serial) && !t.leaving) {
         t.leaving = true;
         t.target.copy(EXIT);
         t.person.root.visible = true;
+        t.person.setPose('stand');
       }
     }
   }

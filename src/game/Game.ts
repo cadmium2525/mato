@@ -164,6 +164,13 @@ export class Game {
 
     if (options.debug) {
       (window as unknown as Record<string, unknown>).__MATO__ = {
+        /** デバッグ: カメラを任意の位置へ（見た目の確認用） */
+        showCurrent: () => this.queueView.setCurrentVisible(true),
+        camera: (pos: [number, number, number], target: [number, number, number]) => {
+          this.camera.position.set(...pos);
+          this.camera.lookAt(...target);
+          this.renderer.render(this.world.scene, this.camera);
+        },
         state: () => ({
           phase: this.director.phase,
           phaseTime: this.director.phaseTime,
@@ -421,6 +428,9 @@ export class Game {
           comment: cleanerComment(record.cleared),
         });
         this.cameraDirector.cut('approach');
+        // 引きの画では発射口（プレイ用カメラの画面外）が見えてしまうので、尿流は片付ける
+        this.sim.impacts = [];
+        this.vfx.clear();
         this.lastRecord = { ...record, nearMisses: this.score.nearMisses, comment: cleanerComment(record.cleared), isNewBest };
         this.snapshot = null;
         this.snapshotPending = true;

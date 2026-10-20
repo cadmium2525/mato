@@ -329,7 +329,7 @@ html, body, #app {
   .hud-sound { top: auto; left: calc(64px + env(safe-area-inset-left)); bottom: calc(12px + env(safe-area-inset-bottom)); }
 }
 
-.screen-tutorial { align-items: flex-start; background: none; pointer-events: none; padding-top: 18vh; }
+.screen-tutorial { align-items: flex-end; background: none; pointer-events: none; padding-bottom: 16vh; }
 .tutorial-card {
   max-width: 420px; margin: 0 auto; padding: 12px 16px;
   background: var(--sign-bg); border-left: 6px solid var(--warn); border-radius: 4px;
