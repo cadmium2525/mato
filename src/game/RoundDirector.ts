@@ -25,6 +25,7 @@ export class RoundDirector {
   private pausedFrom: Phase | null = null;
   private hasPlayedIntro = false;
   private isRetry = false;
+  private shortCinematics = false;
 
   constructor(
     private readonly timing: Timing = GameConfig.timing,
@@ -42,7 +43,7 @@ export class RoundDirector {
     this.current = null;
     this.pausedFrom = null;
     this.isRetry = this.hasPlayedIntro;
-    if (!this.hasPlayedIntro) {
+    if (!this.hasPlayedIntro && !this.shortCinematics) {
       this.hasPlayedIntro = true;
       this.setPhase('INTRO');
     } else {
@@ -50,8 +51,17 @@ export class RoundDirector {
     }
   }
 
+  /** 演出短縮: 導入を省略し、行列パンとクリア演出を短くする */
+  setShortCinematics(on: boolean): void {
+    this.shortCinematics = on;
+  }
+
   get queuePanSeconds(): number {
-    return this.isRetry ? this.timing.queuePanRetry : this.timing.queuePanFirst;
+    return this.isRetry || this.shortCinematics ? this.timing.queuePanRetry : this.timing.queuePanFirst;
+  }
+
+  get roundClearSeconds(): number {
+    return this.shortCinematics ? Math.min(0.8, this.timing.roundClear) : this.timing.roundClear;
   }
 
   update(dt: number): void {
@@ -68,7 +78,7 @@ export class RoundDirector {
         if (this.phaseTime >= this.timing.roundReady) this.setPhase('PLAYING');
         break;
       case 'ROUND_CLEAR':
-        if (this.phaseTime >= this.timing.roundClear) this.beginRound();
+        if (this.phaseTime >= this.roundClearSeconds) this.beginRound();
         break;
       case 'HIT':
         if (this.phaseTime >= this.timing.hitSlowmo) this.setPhase('GAME_OVER');

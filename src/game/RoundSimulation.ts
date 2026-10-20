@@ -16,6 +16,8 @@ export interface StepResult {
   nearMisses: number;
   /** 排尿が終わり、すべての着弾の判定が終わった（生存） */
   finished: boolean;
+  /** このステップで新しい着弾予告（ショットガン・跳ね返り）が出た */
+  warned: boolean;
 }
 
 /**
@@ -74,7 +76,7 @@ export class RoundSimulation {
   }
 
   step(dt: number, move: Vec2): StepResult {
-    const result: StepResult = { hit: null, nearMisses: 0, finished: false };
+    const result: StepResult = { hit: null, nearMisses: 0, finished: false, warned: false };
     const enemy = this.enemy;
     if (!enemy) return result;
 
@@ -90,7 +92,10 @@ export class RoundSimulation {
       aim: enemy.aim,
       toUV: this.toUV,
     });
-    for (const imp of fired) this.impacts.push(imp);
+    for (const imp of fired) {
+      this.impacts.push(imp);
+      if (imp.kind === 'pellet') result.warned = true;
+    }
 
     // 判定の終わった着弾を捨てる（飛沫表示のため少しだけ猶予）。被弾時の早期 return より前に行う
     const now = this.time;

@@ -124,6 +124,13 @@ export const GameConfig = {
     deadzone: 6,
   },
 
+  /** 画質プリセット。pixelRatio は上限（端末の devicePixelRatio を超えない） */
+  quality: {
+    high: { pixelRatio: 2, shadows: true, stainSize: 512 },
+    medium: { pixelRatio: 1.25, shadows: true, stainSize: 512 },
+    low: { pixelRatio: 1, shadows: false, stainSize: 256 },
+  },
+
   render: {
     maxPixelRatio: 2,
     /** スマホは発熱・電池を考慮して抑える */

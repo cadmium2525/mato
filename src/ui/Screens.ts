@@ -1,4 +1,10 @@
 import type { BestRecord } from '../game/ScoreManager';
+import type { Quality, Settings } from '../game/Settings';
+
+export type ShareTarget = 'x' | 'line' | 'bluesky' | 'native' | 'copy' | 'image';
+export type SettingKey = 'sound' | 'quality' | 'cinematics';
+
+const QUALITY_LABEL: Record<Quality, string> = { high: '高', medium: '中', low: '低' };
 
 export interface ResultData {
   cleared: number;
@@ -16,6 +22,8 @@ export interface ScreenHandlers {
   onRetry: () => void;
   onTitle: () => void;
   onResume: () => void;
+  onShare: (target: ShareTarget) => void;
+  onSetting: (key: SettingKey) => void;
 }
 
 function formatBest(best: BestRecord | null): string {
@@ -30,6 +38,7 @@ export class Screens {
   private readonly pause: HTMLDivElement;
   private readonly result: HTMLDivElement;
   private readonly caption: HTMLDivElement;
+  private readonly tutorial: HTMLDivElement;
 
   constructor(private readonly parent: HTMLElement, handlers: ScreenHandlers) {
     this.title = this.make(`
@@ -45,6 +54,11 @@ export class Screens {
           <dt>演出スキップ</dt><dd><span class="keys-only">Enter / Space</span><span class="touch-only">画面をタップ</span></dd>
         </dl>
         <p class="title-best" data-slot="best"></p>
+        <div class="settings" role="group" aria-label="設定">
+          <button class="chip-btn" data-set="sound" data-slot="set-sound"></button>
+          <button class="chip-btn" data-set="quality" data-slot="set-quality"></button>
+          <button class="chip-btn" data-set="cinematics" data-slot="set-cinematics"></button>
+        </div>
       </div>`);
     this.intro = this.make(`<p class="intro-text" data-slot="text"></p><p class="intro-skip">Enter / タップでスキップ</p>`, 'screen-intro');
     this.pause = this.make(`
@@ -67,9 +81,31 @@ export class Screens {
         <p class="result-comment"><span>清掃員からの評価</span><strong data-slot="comment"></strong></p>
         <p class="result-best" data-slot="best"></p>
         <button class="btn btn-primary" data-act="retry">リトライ <kbd>Enter</kbd></button>
+        <div class="share">
+          <p class="share-title">記録をシェア</p>
+          <div class="share-row">
+            <button class="share-btn share-x" data-share="x" aria-label="Xでポスト">𝕏 ポスト</button>
+            <button class="share-btn share-line" data-share="line">LINE</button>
+            <button class="share-btn share-bsky" data-share="bluesky">Bluesky</button>
+            <button class="share-btn share-native hidden" data-share="native" data-slot="native">共有…</button>
+          </div>
+          <div class="share-row">
+            <button class="share-btn share-sub" data-share="copy">文面をコピー</button>
+            <button class="share-btn share-sub" data-share="image">画像を保存</button>
+          </div>
+          <p class="share-status" data-slot="share-status" aria-live="polite"></p>
+        </div>
         <button class="btn" data-act="title">タイトルへ <kbd>T</kbd></button>
       </div>`);
     this.caption = this.make(`<p data-slot="text"></p>`, 'screen-caption');
+    this.tutorial = this.make(
+      `<div class="tutorial-card">
+        <b>見かた</b>
+        <span class="tut-ring tut-aim"></span>黄色い輪＝相手の照準。少し遅れてそこに着弾します<br />
+        <span class="tut-ring tut-warn"></span>オレンジの輪＝着弾予告。縮みきったら着弾
+      </div>`,
+      'screen-tutorial',
+    );
 
     const bind = (root: HTMLElement): void => {
       root.querySelectorAll<HTMLButtonElement>('[data-act]').forEach((b) => {
@@ -83,6 +119,12 @@ export class Screens {
       });
     };
     [this.title, this.pause, this.result].forEach(bind);
+    this.result.querySelectorAll<HTMLButtonElement>('[data-share]').forEach((b) => {
+      b.addEventListener('click', () => handlers.onShare(b.dataset.share as ShareTarget));
+    });
+    this.title.querySelectorAll<HTMLButtonElement>('[data-set]').forEach((b) => {
+      b.addEventListener('click', () => handlers.onSetting(b.dataset.set as SettingKey));
+    });
   }
 
   private make(html: string, extra = ''): HTMLDivElement {
@@ -100,7 +142,7 @@ export class Screens {
   }
 
   hideAll(): void {
-    for (const s of [this.title, this.intro, this.pause, this.result, this.caption]) s.classList.add('hidden');
+    for (const s of [this.title, this.intro, this.pause, this.result, this.caption, this.tutorial]) s.classList.add('hidden');
   }
 
   showTitle(best: BestRecord | null): void {
@@ -141,8 +183,28 @@ export class Screens {
     this.slot(this.result, 'seed').textContent = String(r.seed);
     this.slot(this.result, 'comment').textContent = `「${r.comment}」`;
     this.slot(this.result, 'best').textContent = formatBest(r.best);
+    this.setShareStatus('');
     this.result.classList.remove('hidden');
     this.result.querySelector<HTMLButtonElement>('[data-act="retry"]')?.focus();
+  }
+
+  /** タイトルの設定ボタンの表示を更新 */
+  renderSettings(s: Settings): void {
+    this.slot(this.title, 'set-sound').textContent = `サウンド：${s.sound ? 'ON' : 'OFF'}`;
+    this.slot(this.title, 'set-quality').textContent = `画質：${QUALITY_LABEL[s.quality]}`;
+    this.slot(this.title, 'set-cinematics').textContent = `演出：${s.shortCinematics ? '短縮' : '通常'}`;
+  }
+
+  showTutorial(visible: boolean): void {
+    this.tutorial.classList.toggle('hidden', !visible);
+  }
+
+  setNativeShareAvailable(available: boolean): void {
+    this.slot(this.result, 'native').classList.toggle('hidden', !available);
+  }
+
+  setShareStatus(text: string): void {
+    this.slot(this.result, 'share-status').textContent = text;
   }
 
   showError(message: string): void {

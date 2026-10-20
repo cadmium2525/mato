@@ -30,12 +30,14 @@ import { UrinalSurface } from './UrinalSurface';
 /** (nu+1)×(nv+1) の格子からメッシュを作る */
 function gridGeometry(nu: number, nv: number, fn: (a: number, b: number, out: Vector3) => void): BufferGeometry {
   const positions: number[] = [];
+  const uvs: number[] = [];
   const indices: number[] = [];
   const p = new Vector3();
   for (let j = 0; j <= nv; j++) {
     for (let i = 0; i <= nu; i++) {
       fn(i / nu, j / nv, p);
       positions.push(p.x, p.y, p.z);
+      uvs.push(i / nu, j / nv);
     }
   }
   for (let j = 0; j < nv; j++) {
@@ -49,6 +51,7 @@ function gridGeometry(nu: number, nv: number, fn: (a: number, b: number, out: Ve
   }
   const g = new BufferGeometry();
   g.setAttribute('position', new Float32BufferAttribute(positions, 3));
+  g.setAttribute('uv', new Float32BufferAttribute(uvs, 2));
   g.setIndex(indices);
   g.computeVertexNormals();
   return g;
@@ -59,7 +62,15 @@ export class RestroomScene {
   readonly surface = new UrinalSurface();
   /** プレイ対象の便器（中央） */
   readonly urinal: Group;
+  /** 内壁の表示範囲（汚れテクスチャの座標変換に使う） */
+  readonly innerBounds = { thetaD: 0, yBasin: 0.47, yTop: 1.1 };
+  /** 内壁と同じ形でわずかに手前へ浮かせた、汚れ（濡れ）用のジオメトリ。uv = (θ割合, 高さ割合) */
+  stainGeometry!: BufferGeometry;
+  /** 受け皿にたまる水面 */
+  puddle!: Mesh;
+  private puddleMaterial!: MeshPhysicalMaterial;
   private readonly disposables: Array<{ dispose(): void }> = [];
+  private spot!: SpotLight;
 
   constructor(renderer: WebGLRenderer, private readonly lowQuality = false) {
     this.scene.background = new Color(0xc9d0d4);
@@ -83,6 +94,51 @@ export class RestroomScene {
       this.scene.add(u);
     }
     this.buildPartitions();
+    this.buildPuddle();
+  }
+
+  /** 影の有無を切り替える（画質設定） */
+  setShadows(on: boolean): void {
+    this.spot.castShadow = on;
+  }
+
+  /** 0〜1 で受け皿の濁り具合を設定（演出のみ） */
+  setPuddleLevel(level: number): void {
+    const k = Math.max(0, Math.min(1, level));
+    this.puddleMaterial.opacity = k * 0.55;
+    this.puddle.visible = k > 0.001;
+  }
+
+  private buildPuddle(): void {
+    const { radiusX: rx, radiusZ: rz, centerZ: cz } = this.surface.params;
+    const { thetaD, yBasin } = this.innerBounds;
+    const shape = new Shape();
+    const n = 40;
+    for (let i = 0; i <= n; i++) {
+      const theta = -thetaD + (i / n) * 2 * thetaD;
+      const x = rx * 0.97 * Math.sin(theta);
+      const z = cz - rz * 0.97 * Math.cos(theta);
+      if (i === 0) shape.moveTo(x, -z);
+      else shape.lineTo(x, -z);
+    }
+    shape.closePath();
+    this.puddleMaterial = this.track(
+      new MeshPhysicalMaterial({
+        color: 0xe6c44a,
+        roughness: 0.05,
+        metalness: 0,
+        clearcoat: 1,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      }),
+    );
+    this.puddle = new Mesh(this.track(new ShapeGeometry(shape, 40)), this.puddleMaterial);
+    this.puddle.rotation.x = -Math.PI / 2;
+    this.puddle.position.y = yBasin + 0.0015;
+    this.puddle.renderOrder = 1;
+    this.puddle.visible = false;
+    this.scene.add(this.puddle);
   }
 
   private track<T extends { dispose(): void }>(o: T): T {
@@ -97,6 +153,7 @@ export class RestroomScene {
     spot.position.set(0.25, 2.55, 1.35);
     spot.target.position.set(0, 0.75, 0.15);
     spot.castShadow = !this.lowQuality;
+    this.spot = spot;
     spot.shadow.mapSize.set(1024, 1024);
     spot.shadow.bias = -0.0004;
     spot.shadow.normalBias = 0.02;
@@ -186,6 +243,7 @@ export class RestroomScene {
     const thetaD = s.thetaMax + 0.5;
     const yBasin = 0.47;
     const yTop = 1.1;
+    Object.assign(this.innerBounds, { thetaD, yBasin, yTop });
     const t = 0.035; // 肉厚
     const yBottomOuter = 0.36;
     const yTopOuter = 1.13;
@@ -228,6 +286,20 @@ export class RestroomScene {
       innerColors.push(k, k, k * 1.01);
     }
     inner.setAttribute('color', new Float32BufferAttribute(innerColors, 3));
+
+    // 汚れ用: 内壁を法線方向に 0.7mm 手前へ
+    const stain = inner.clone();
+    stain.deleteAttribute('color');
+    const sp = stain.getAttribute('position');
+    const sn = stain.getAttribute('normal');
+    // computeVertexNormals の向きが内側/外側どちらでもよいよう、便器の軸から内側（手前）を判定する
+    for (let i = 0; i < sp.count; i++) {
+      const toAxisZ = cz - sp.getZ(i);
+      const toAxisX = -sp.getX(i);
+      const sign = sn.getX(i) * toAxisX + sn.getZ(i) * toAxisZ >= 0 ? 1 : -1;
+      sp.setXYZ(i, sp.getX(i) + sn.getX(i) * 0.0007 * sign, sp.getY(i), sp.getZ(i) + sn.getZ(i) * 0.0007 * sign);
+    }
+    this.stainGeometry = this.track(stain);
     const innerCeramic = this.track(ceramic.clone());
     innerCeramic.vertexColors = true;
     const innerMesh = new Mesh(this.track(inner), innerCeramic);
@@ -296,6 +368,16 @@ export class RestroomScene {
       slot.position.set(0, yBasin + 0.004, drainZ + i * 0.011);
       group.add(slot);
     }
+
+    // 消臭剤（トイレボール）
+    const cake = new Mesh(
+      this.track(new CylinderGeometry(0.026, 0.028, 0.012, 24)),
+      this.track(new MeshStandardMaterial({ color: 0x5aa9e6, roughness: 0.55 })),
+    );
+    cake.position.set(0.012, yBasin + 0.008, drainZ + 0.035);
+    cake.rotation.set(0.05, 0.6, 0.04);
+    cake.castShadow = true;
+    group.add(cake);
 
     // フラッシュバルブと配管
     const pipe = new Mesh(this.track(new CylinderGeometry(0.014, 0.014, 0.42, 16)), chrome);

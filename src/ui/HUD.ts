@@ -36,7 +36,9 @@ export class HUD {
   private queueKey = '';
   private messageTimer = 0;
 
-  constructor(parent: HTMLElement, onPause: () => void) {
+  private readonly soundBtn: HTMLButtonElement;
+
+  constructor(parent: HTMLElement, onPause: () => void, onToggleSound: () => void) {
     this.root = el('div', 'hud hidden', parent);
     const left = el('div', 'hud-panel hud-left', this.root);
     this.cleared = el('div', 'hud-cleared', left);
@@ -63,6 +65,16 @@ export class HUD {
     pause.setAttribute('aria-label', 'ポーズ');
     pause.textContent = 'Ⅱ';
     pause.addEventListener('click', onPause);
+
+    this.soundBtn = el('button', 'hud-sound', this.root);
+    this.soundBtn.type = 'button';
+    this.soundBtn.addEventListener('click', onToggleSound);
+    this.setSound(true);
+  }
+
+  setSound(on: boolean): void {
+    this.soundBtn.textContent = on ? '🔊' : '🔇';
+    this.soundBtn.setAttribute('aria-label', on ? 'サウンドをOFFにする' : 'サウンドをONにする');
   }
 
   show(visible: boolean): void {

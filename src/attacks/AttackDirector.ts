@@ -122,15 +122,15 @@ export class AttackDirector {
     if (emitting) {
       const attackId = this.streamAttackId(ctx.now);
       for (let s = 0; s < ctx.shots; s++) {
-        for (const o of this.offsets(this.current)) {
+        this.offsets(this.current).forEach((o, lane) => {
           const at = { x: ctx.aim.x + o.x, y: ctx.aim.y + o.y };
           const impactAt = ctx.now + opts.profile.timeToImpact;
-          const imp = this.make(ctx, 'stream', attackId, at, opts.profile.impactRadius, ctx.now, impactAt, impactAt + this.tuning.impactLifetime);
+          const imp = this.make(ctx, 'stream', attackId, at, opts.profile.impactRadius, ctx.now, impactAt, impactAt + this.tuning.impactLifetime, undefined, undefined, lane);
           if (imp) {
             out.push(imp);
             this.maybeBounce(ctx, imp, at, out);
           }
-        }
+        });
       }
     }
 
@@ -240,6 +240,7 @@ export class AttackDirector {
     endAt: number,
     warnAt?: number,
     from?: Impact,
+    lane?: number,
   ): Impact | null {
     const { u, v } = ctx.toUV(at.x, at.y);
     // 便器の外に大きく外れた着弾は作らない（判定上も当たり得ない）
@@ -257,6 +258,7 @@ export class AttackDirector {
       kind,
       ...(warnAt !== undefined ? { warnAt } : {}),
       ...(from ? { fromU: from.u, fromV: from.v } : {}),
+      ...(lane !== undefined ? { lane } : {}),
     };
   }
 }

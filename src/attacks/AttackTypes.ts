@@ -32,6 +32,8 @@ export interface Impact {
   /** 尿粒の出発点が便器表面上にある場合（跳ね返り）の座標 */
   readonly fromU?: number;
   readonly fromV?: number;
+  /** 尿流の何本目か（2WAY/3WAY）。描画で連続した流れとしてつなぐのに使う */
+  readonly lane?: number;
 }
 
 export interface Vec2 {

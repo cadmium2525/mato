@@ -42,6 +42,24 @@ Three.js + TypeScript + Vite の完全クライアントサイド構成で、Git
 - 画面右下の「順番待ち」と、カメラが映す行列は実際の登場順と一致しています。
 - ウィンドウのフォーカスが外れると自動でポーズします。
 
+### 設定（タイトル画面）
+
+| ボタン | 内容 |
+|---|---|
+| サウンド：ON/OFF | 効果音（プレイ中は画面上部の 🔊 ボタンでも切替） |
+| 画質：高/中/低 | 解像度・影・飛沫の量・汚れテクスチャの解像度。PCは「高」、スマホは「中」が既定 |
+| 演出：通常/短縮 | 短縮にすると導入を省き、行列パンとクリア演出を短くする |
+
+設定と初回ヒントの表示済みフラグは localStorage に保存（使えない環境でも既定値で遊べる）。
+
+### 記録のシェア（ゲームオーバー画面）
+
+- **𝕏 ポスト / LINE / Bluesky**: 各サービスの公式の投稿画面（intent URL）を新しいタブで開く。本文に人数・スコア・ニアミス・生存時間・清掃員の評価、`#的逃走中`、ゲームのURLが入る
+- **共有…**: スマホなど Web Share API がある環境だけ表示。OS の共有シートで、記録カード画像つきで送れる
+- **文面をコピー / 画像を保存**: 投稿文をクリップボードへ、記録カード（1200×630、ゲームオーバー時の3D画面入り）をPNGで保存
+- 共有URLには `?seed=` が付き、開いた人は**同じ順番待ちの列**で挑戦できる
+- サーバーは使わない（画像はブラウザ内の Canvas で生成）
+
 ### URL パラメータ
 
 | パラメータ | 内容 |
@@ -131,9 +149,29 @@ VITE_BASE_PATH=/mato/ npm run build
 - ニアミス・回避スコア・自己ベスト・ポーズ（Phase 1 で実装済み）
 - **回避経路の検証**: 見えている情報だけで避ける計画型ボットで、全キャラ×全攻撃を解禁人数の難易度で自動テスト（下記）
 
-### 後回し（Phase 3 以降）
+### Phase 3: Presentation / Release — 完了
 
-- Phase 3: 汚れの蓄積、効果音（Web Audio）と ON/OFF、行列の前進演出の強化、グラフィックス設定 UI、レスポンシブ調整、チュートリアル
+- **尿の表現を作り直し**（`src/scene/StreamVFX.ts`, `src/scene/water/WaterMaterials.ts`）
+  - 尿流は粒の列ではなく、同じ流れの飛行中の着弾をつないだ**連続した液体のチューブ**。頂点バッファを使い回して毎フレーム更新（ジオメトリの再生成なし）
+  - 専用シェーダー: 中心ほど濃い琥珀色（厚み）、縁のフレネル、鋭い鏡面ハイライトと蛍光灯の映り込み、流れに沿ってスクロールするさざなみ、太さの揺らぎ。彩度を保つため尿だけトーンマッピングしない
+  - 着弾: 判定中は判定円をくっきり（公平性のため大きさは判定そのもの）、その後は波紋が広がって消える
+  - 着弾点から手前へ跳ね返る**飛沫パーティクル**（重力・空気抵抗、速度方向に伸びる水滴）
+  - 着弾点から**壁を流れ落ちる水の膜**
+  - 壁に**濡れ・垂れ跡が蓄積**（Canvas テクスチャ。1ゲームの間たまり続け、新しいゲームで掃除）、受け皿の水が濁っていく。視認性を損なわないよう淡く、予告・判定より奥に描く
+  - 散弾・跳ね返りは個別の水滴、着弾予告は収束するオレンジのリング
+  - 命中時は大きな水しぶき＋カメラの揺れ
+- **効果音**（Web Audio で合成、音源ファイルなし）: 水流（照準の左右に定位）と泡の音、命中、ニアミス、水洗の音つきクリア、開始、ゲームオーバー、ショットガン予告、散弾の着弾、クリック。最初の操作で有効化（自動再生制限対策）
+- **カメラ演出**: 行列パンは先頭から最後尾へ流す、命中時の揺れ
+- **便器の小物**: 消臭剤（トイレボール）、受け皿の水面
+- **初回ヒント**: 最初のプレイだけ「黄色い輪＝照準／オレンジの輪＝着弾予告」を表示
+- **設定**: サウンド・画質（高/中/低）・演出（通常/短縮）
+- **SNS シェア**: 上記「記録のシェア」
+- **性能**: プレイ中の描画呼び出し約30回・約1万ポリゴン。リトライを繰り返してもジオメトリ/テクスチャ数が増えないことを確認
+
+### 今後の課題
+
+- 実機（iOS Safari / Android Chrome / 各種PC）でのフレームレートと難易度の手触りの確認
+- 人物モデルの高精細化、振動フィードバック、フルスクリーン
 - 対象外: ゲームパッド、オンラインランキング
 - スマホの残課題: 実機（iOS Safari / Android Chrome）でのフレームレートと操作感の確認、振動フィードバック、フルスクリーン化
 
@@ -153,6 +191,8 @@ npm test
 | `tests/ScoreManager.test.ts` | ベスト保存/読込、localStorage 例外・取得不可・壊れたJSONでも落ちない、比較順、加点 |
 | `tests/TouchJoystick.test.ts` | デッドゾーン、画面座標→上下の向き、長さ1以下（キーボードより速くならない）、アナログ量、基点の追従 |
 | `tests/AttackPatterns.test.ts` | 2WAYの空き幅、3WAYの横逃げ道と隙間、ショットガンの粒数・予告時間・散布範囲・シード再現・同時着弾なし、コンボの休止と非重複、跳ね返りの予兆時間と位置、マッチョ以外は跳ね返らない |
+| `tests/Share.test.ts` | 投稿文の内容（人数・スコア・評価・ベスト更新）、X の文字数上限、共有URL（debug 等を除去し seed のみ）、X / LINE / Bluesky の投稿用URL |
+| `tests/Settings.test.ts` | 設定の保存/読込、不正値・壊れたJSON・localStorage 不可でも既定値、画質プリセットの序列、演出短縮 |
 | `tests/RoundSimulation.test.ts` | 静止した的には命中、計画型ボットが全キャラ×全攻撃（2WAY@4, 3WAY@8, ショットガン@13, コンボ@18/@40）を生き延びられる（各キャラ60%以上・全体85%以上）、ラウンド間で着弾を引き継がない、再現性 |
 
 ## 技術上の決定事項（仮仕様）
@@ -176,10 +216,13 @@ src/
 ├── main.ts                  起動・WebGL チェック
 ├── styles.css               トイレ案内表示風のUI
 ├── game/                    Game（統括）, GameConfig, GameState, RoundDirector, RoundSimulation,
-│                            DifficultyDirector, ScoreManager, SeededRandom
+│                            DifficultyDirector, ScoreManager, SeededRandom, Settings
+├── audio/AudioManager.ts    Web Audio の合成効果音
+├── share/                   Share（投稿文・投稿用URL・Web Share）, ShareCard（記録カード画像）
 ├── input/                   InputManager（キーボード）, TouchJoystick（タッチ/ドラッグ）
 ├── scene/                   RestroomScene, UrinalSurface, CameraDirector, QueueView, PersonFactory,
-│                            StreamVFX, SurfaceMarkers, textures
+│                            StreamVFX（尿の描画）, StainLayer（濡れ・垂れ跡）, water/WaterMaterials（水のシェーダー）,
+│                            SurfaceMarkers, textures
 ├── entities/                TargetPlayer, EnemyProfiles, EnemyController, QueueManager
 ├── attacks/                 AttackTypes, AttackDirector, Collision
 └── ui/                      HUD, Screens
