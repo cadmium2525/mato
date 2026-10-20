@@ -53,10 +53,11 @@ export const GameConfig = {
      */
     twoWayClear: 0.11,
     /**
-     * 2WAY は隙間に居座れないよう、周期的に「閉じる」（2本が中央の照準へ寄って重なる）。
-     * open 秒開いたあと close 秒で閉じ、hold 秒重なり、reopen 秒で開く。閉じ始める warn 秒前から照準リングが点滅して予告する
+     * 2WAY は隙間に居座れないよう、ときどき「閉じる」（2本が中央の照準へ寄って重なる）。
+     * 開いている時間は毎回 openMin〜openMax 秒のランダム（最初の1回だけ firstOpenMin 秒以上）。
+     * close 秒で閉じ、hold 秒重なり、reopen 秒で開く。閉じ始める warn 秒前から照準リングが点滅して予告する
      */
-    twoWayCycle: { open: 1.4, warn: 0.4, close: 0.3, hold: 0.15, reopen: 0.3 },
+    twoWayCycle: { openMin: 0.9, openMax: 2.2, firstOpenMin: 1.2, warn: 0.4, close: 0.3, hold: 0.15, reopen: 0.3 },
     /**
      * 3WAY: 中央＋左右下の「Λ」字。左右は drop だけ下にずらすので、
      * 照準と同じ高さを横へ逃げる道は常に空いている（drop > 着弾半径 + 的の判定半径）。

@@ -61,15 +61,36 @@ describe('2WAY', () => {
 });
 
 describe('2WAY の開閉', () => {
-  it('開いている間は隙間があり、周期的に閉じて照準で重なる', () => {
+  it('開いている間は隙間があり、ときどき閉じて照準で重なり、また開く', () => {
     const { d, profile } = director('twoWay');
     const c = GameConfig.attack.twoWayCycle;
     const start = profile.windupSeconds;
+    const closes = d.twoWayCloseTimes();
+    expect(closes.length).toBeGreaterThanOrEqual(2);
     expect(d.twoWayState(start + 0.1).openness).toBe(1);
-    expect(d.twoWayState(start + c.open + c.close + c.hold * 0.5).openness).toBe(0);
-    // 1周期後にまた開く
-    const cycle = c.open + c.close + c.hold + c.reopen;
-    expect(d.twoWayState(start + cycle + 0.1).openness).toBe(1);
+    expect(d.twoWayState(closes[0] + c.close + c.hold * 0.5).openness).toBe(0);
+    expect(d.twoWayState(closes[0] + c.close + c.hold + c.reopen + 0.05).openness).toBe(1);
+  });
+
+  it('閉じる間隔はランダム（範囲内）で、同じシードなら同じ', () => {
+    const c = GameConfig.attack.twoWayCycle;
+    const intervals: number[] = [];
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const { d, profile } = director('twoWay', 'elderly', seed);
+      const closes = d.twoWayCloseTimes();
+      // 開いている時間 = 前の再オープン完了（最初は区間開始）から閉じ始めまで
+      let openFrom = profile.windupSeconds;
+      closes.forEach((at, i) => {
+        const open = at - openFrom;
+        expect(open).toBeGreaterThanOrEqual((i === 0 ? c.firstOpenMin : c.openMin) - 1e-9);
+        expect(open).toBeLessThanOrEqual(c.openMax + 1e-9);
+        intervals.push(open);
+        openFrom = at + c.close + c.hold + c.reopen;
+      });
+      expect(director('twoWay', 'elderly', seed).d.twoWayCloseTimes()).toEqual(closes);
+    }
+    // 毎回同じ間隔ではない
+    expect(new Set(intervals.map((x) => x.toFixed(3))).size).toBeGreaterThan(intervals.length / 2);
   });
 
   it('隙間が的の判定より狭くなる前に、十分な予告（照準リングの点滅）がある', () => {

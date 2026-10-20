@@ -58,12 +58,15 @@ export class AttackDirector {
   private primaryCount = 0;
   private current: ActivePattern = 'gap';
   private now = 0;
+  /** 2WAY 区間ごとの「閉じ始める時刻」（ラウンド開始時にシード付き乱数で決める） */
+  private twoWayCloses = new Map<PatternSegment, number[]>();
 
   constructor(private readonly tuning: Tuning = GameConfig.attack) {}
 
   reset(): void {
     this.opts = null;
     this.segmentList = [];
+    this.twoWayCloses = new Map();
     this.streamAttackStartedAt = -Infinity;
     this.wasEmitting = false;
     this.nextVolleyAt = 0;
@@ -76,6 +79,7 @@ export class AttackDirector {
     this.reset();
     this.opts = opts;
     this.segmentList = this.buildSegments(opts);
+    this.scheduleTwoWayCloses(opts.rng.fork(0x2a7));
     this.nextVolleyAt = opts.startAt;
   }
 
@@ -100,13 +104,40 @@ export class AttackDirector {
     const seg = this.segmentAt(t);
     if (!seg || seg.pattern !== 'twoWay') return { openness: 1, warning: false };
     const c = this.tuning.twoWayCycle;
-    const cycle = c.open + c.close + c.hold + c.reopen;
-    const k = (t - seg.from) % cycle;
     const smooth = (x: number): number => x * x * (3 - 2 * x);
-    if (k < c.open) return { openness: 1, warning: k >= c.open - c.warn };
-    if (k < c.open + c.close) return { openness: 1 - smooth((k - c.open) / c.close), warning: true };
-    if (k < c.open + c.close + c.hold) return { openness: 0, warning: true };
-    return { openness: smooth((k - c.open - c.close - c.hold) / c.reopen), warning: false };
+    for (const at of this.twoWayCloses.get(seg) ?? []) {
+      if (t < at - c.warn) return { openness: 1, warning: false };
+      if (t < at) return { openness: 1, warning: true };
+      const k = t - at;
+      if (k < c.close) return { openness: 1 - smooth(k / c.close), warning: true };
+      if (k < c.close + c.hold) return { openness: 0, warning: true };
+      if (k < c.close + c.hold + c.reopen) return { openness: smooth((k - c.close - c.hold) / c.reopen), warning: false };
+    }
+    return { openness: 1, warning: false };
+  }
+
+  /** テスト・確認用: 2WAY 区間ごとの閉じ始める時刻 */
+  twoWayCloseTimes(): number[] {
+    return [...this.twoWayCloses.values()].flat();
+  }
+
+  private scheduleTwoWayCloses(rng: SeededRandom): void {
+    const c = this.tuning.twoWayCycle;
+    for (const seg of this.segmentList) {
+      if (seg.pattern !== 'twoWay') continue;
+      const closes: number[] = [];
+      let t = seg.from;
+      let first = true;
+      for (;;) {
+        const open = rng.range(first ? Math.max(c.openMin, c.firstOpenMin) : c.openMin, c.openMax);
+        first = false;
+        const at = t + open;
+        if (at >= seg.to) break;
+        closes.push(at);
+        t = at + c.close + c.hold + c.reopen;
+      }
+      this.twoWayCloses.set(seg, closes);
+    }
   }
 
   /** 照準に対する尿流の着弾オフセット（照準リングの表示にも使う） */
