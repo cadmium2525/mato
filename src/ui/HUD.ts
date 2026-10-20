@@ -9,7 +9,6 @@ export interface HudState {
   total: number;
   score: number;
   nearMisses: number;
-  seed: number;
   upcoming: ReadonlyArray<{ serial: number; kind: EnemyKind; name: string }>;
 }
 
@@ -42,7 +41,6 @@ export class HUD {
   private readonly remaining: HTMLDivElement;
   private readonly score: HTMLDivElement;
   private readonly near: HTMLDivElement;
-  private readonly seed: HTMLDivElement;
   private readonly queue: HTMLOListElement;
   private readonly message: HTMLDivElement;
   private readonly cache = new Map<HTMLElement, string>();
@@ -63,7 +61,6 @@ export class HUD {
     const right = el('div', 'hud-panel hud-right', this.root);
     this.score = el('div', 'hud-score', right);
     this.near = el('div', 'hud-near', right);
-    this.seed = el('div', 'hud-seed', right);
 
     const q = el('div', 'hud-panel hud-queue', this.root);
     el('div', 'hud-queue-title', q).textContent = '順番待ち';
@@ -108,7 +105,6 @@ export class HUD {
     this.setText(this.remaining, s.total > 0 ? `残り ${Math.max(0, s.remaining).toFixed(1)} 秒` : '');
     this.setText(this.score, `SCORE ${s.score.toLocaleString('ja-JP')}`);
     this.setText(this.near, `ニアミス ${s.nearMisses}`);
-    this.setText(this.seed, `SEED ${s.seed}`);
 
     const key = s.upcoming.map((u) => `${u.serial}:${u.kind}`).join(',');
     if (key !== this.queueKey) {

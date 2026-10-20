@@ -114,7 +114,7 @@ export function drawShareCard(r: ShareRecord, snapshot: HTMLCanvasElement | null
 
   ctx.fillStyle = '#66717a';
   ctx.font = `600 16px ${FONT}`;
-  ctx.fillText(`#${HASHTAG}  SEED ${r.seed}`, px + 32, py + ph - 22);
+  ctx.fillText(`#${HASHTAG}`, px + 32, py + ph - 22);
   ctx.textAlign = 'right';
   ctx.fillText(url.replace(/^https?:\/\//, ''), px + pw - 24, py + ph - 22, pw * 0.55);
   ctx.textAlign = 'left';

@@ -76,7 +76,6 @@ export class Screens {
           <dt>スコア</dt><dd data-slot="score"></dd>
           <dt>ニアミス</dt><dd data-slot="near"></dd>
           <dt>生存時間</dt><dd data-slot="time"></dd>
-          <dt>SEED</dt><dd data-slot="seed"></dd>
         </dl>
         <p class="result-comment"><span>清掃員からの評価</span><strong data-slot="comment"></strong></p>
         <p class="result-best" data-slot="best"></p>
@@ -183,7 +182,6 @@ export class Screens {
     this.slot(this.result, 'score').textContent = r.score.toLocaleString('ja-JP');
     this.slot(this.result, 'near').textContent = `${r.nearMisses} 回`;
     this.slot(this.result, 'time').textContent = `${r.survivalTime.toFixed(1)} 秒`;
-    this.slot(this.result, 'seed').textContent = String(r.seed);
     this.slot(this.result, 'comment').textContent = `「${r.comment}」`;
     this.slot(this.result, 'best').textContent = formatBest(r.best);
     this.setShareStatus('');

@@ -623,7 +623,6 @@ export class Game {
         total: enemy ? enemy.totalSeconds : 0,
         score: this.score.score,
         nearMisses: this.score.nearMisses,
-        seed: this.director.seed,
         upcoming: this.director.upcoming(GameConfig.queue.hudPreview).map((e) => ({
           serial: e.serial,
           kind: e.kind,
